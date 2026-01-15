@@ -1,7 +1,7 @@
 name: Screenshot Cada Minuto
 on:
   schedule:
-    - cron: '* * * * *' 
+    - cron: '*/2 * * * *' # Cambiado a cada 2 minutos para dar tiempo a la carga pesada
   workflow_dispatch: 
 
 permissions:
@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Configurar Python
         uses: actions/setup-python@v4
@@ -26,13 +28,16 @@ jobs:
 
       - name: Tomar Captura del Dashboard
         run: |
-          shot-scraper https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd -w 1920 -h 1080 --wait 20000 -o dashboard.png
+          # Esperamos 45 segundos para que carguen todos los datos de Looker Studio
+          shot-scraper "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" -w 1920 -h 1080 --wait 45000 -o dashboard.png
 
       - name: Guardar y Subir Imagen
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard.png
-          git commit -m "Actualizacion con mas tiempo de espera" || exit 0
+          git commit -m "Actualizacion dashboard - 45s espera" || exit 0
           git pull --rebase origin main
           git push origin main
