@@ -2,18 +2,35 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="60">
-    <title>Dashboard Medios ON</title>
+    <meta http-equiv="refresh" content="60"> <title>Visor Dashboard Vixion</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: black; overflow: hidden; display: flex; }
-        img { width: 100vw; height: 100vh; object-fit: contain; }
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: black; 
+            overflow: hidden; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        img { 
+            width: 100vw; 
+            height: 100vh; 
+            object-fit: contain; 
+        }
     </style>
 </head>
 <body>
-    <img id="tablero" src="dashboard.png" alt="Cargando datos...">
+    <img id="tablero" src="dashboard.png" alt="Cargando Dashboard...">
+
     <script>
-        // Obliga al navegador viejo a bajar la imagen nueva y no usar la cache
-        document.getElementById('tablero').src = 'dashboard.png?t=' + new Date().getTime();
+        // Este script añade un número único al final de la imagen para que el
+        // navegador del Android 6 no use la foto vieja de la memoria cache.
+        var imagen = document.getElementById('tablero');
+        var nuevaRuta = 'dashboard.png?t=' + new Date().getTime();
+        imagen.src = nuevaRuta;
     </script>
 </body>
 </html>
