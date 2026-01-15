@@ -26,13 +26,13 @@ jobs:
 
       - name: Tomar Captura del Dashboard
         run: |
-          shot-scraper https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd -w 1920 -h 1080 --wait 5000 -o dashboard.png
+          shot-scraper https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd -w 1920 -h 1080 --wait 20000 -o dashboard.png
 
       - name: Guardar y Subir Imagen
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard.png
-          git commit -m "Actualizacion automatica dashboard" || exit 0
+          git commit -m "Actualizacion con mas tiempo de espera" || exit 0
           git pull --rebase origin main
           git push origin main
