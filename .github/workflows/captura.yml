@@ -30,4 +30,5 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add dashboard.png
           git commit -m "Actualizacion automatica dashboard" || exit 0
+          git pull --rebase origin main
           git push origin main
