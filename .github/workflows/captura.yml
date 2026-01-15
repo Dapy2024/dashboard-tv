@@ -13,16 +13,20 @@ jobs:
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
         with:
-          fetch-depth: 0
+          python-version: '3.9'
+
+      - name: Instalar herramienta de captura
+        run: |
+          pip install shot-scraper
+          shot-scraper install
 
       - name: Tomar Captura del Dashboard
-        uses: swinton/screenshot-action@v2.1.0
-        with:
-          url: https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd
-          width: 1920
-          height: 1080
-          output: dashboard.png
+        run: |
+          shot-scraper https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd -w 1920 -h 1080 --wait 5000 -o dashboard.png
 
       - name: Guardar y Subir Imagen
         run: |
