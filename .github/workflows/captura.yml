@@ -28,17 +28,25 @@ jobs:
 
       - name: Capturar Dashboard 1
         run: |
-          # Usamos 'shot-scraper shot' para habilitar la opción de recorte
+          # Eliminamos el panel lateral y errores moviendo la vista con JS
           shot-scraper shot "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --wait 60000 -w 1920 -h 1080 \
-          --clip 85 100 1835 980 \
+          --javascript "
+            document.body.style.marginLeft = '-85px';
+            document.body.style.marginTop = '-100px';
+            document.querySelectorAll('.modal-dialog, [role=\'dialog\']').forEach(el => el.remove());
+          " \
           -o dashboard1.png
 
       - name: Capturar Dashboard 2
         run: |
           shot-scraper shot "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --wait 60000 -w 1920 -h 1080 \
-          --clip 85 100 1835 980 \
+          --javascript "
+            document.body.style.marginLeft = '-85px';
+            document.body.style.marginTop = '-100px';
+            document.querySelectorAll('.modal-dialog, [role=\'dialog\']').forEach(el => el.remove());
+          " \
           -o dashboard2.png
 
       - name: Subir cambios al repositorio
@@ -46,5 +54,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Dashboard 1 y 2 actualizados con recorte" || exit 0
+          git commit -m "Dashboards actualizados sin errores de clip" || exit 0
           git push origin main
