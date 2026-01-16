@@ -1,7 +1,7 @@
-name: Screenshot Cada Minuto
+name: Screenshot Tablas Vixion
 on:
   schedule:
-    - cron: '*/3 * * * *' 
+    - cron: '*/5 * * * *' # Cada 5 minutos para procesar ambas imágenes
   workflow_dispatch: 
 
 permissions:
@@ -24,19 +24,18 @@ jobs:
           pip install shot-scraper
           shot-scraper install
 
-      - name: Tomar Captura Limpia sin Mensajes
+      - name: Capturar Tabla 1 (Recortada)
         run: |
-          # Esperamos 60 segundos y ejecutamos un script para borrar cualquier cartel de la pantalla
+          # x=80 y=100 (quita lateral y arriba) / w=1840 h=980
           shot-scraper "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          -w 1920 -h 1080 \
-          --wait 60000 \
-          --javascript "
-            // Borra carteles de error, diálogos de guardado y banners de cookies
-            document.querySelectorAll('.modal-dialog, .glass-pane, .goog-fixedpanel, [role=\'dialog\'], .cookie-banner').forEach(el => el.remove());
-            // Fuerza a que el fondo sea negro por si queda algún hueco
-            document.body.style.backgroundColor = 'black';
-          " \
-          -o dashboard.png
+          --wait 60000 -w 1920 -h 1080 \
+          -o tabla1.png
+
+      - name: Capturar Tabla 2 (Recortada)
+        run: |
+          shot-scraper "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
+          --wait 60000 -w 1920 -h 1080 \
+          -o tabla2.png
 
       - name: Guardar y Subir
         env:
@@ -44,7 +43,7 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add dashboard.png
-          git commit -m "Captura limpia sin avisos de error" || exit 0
+          git add tabla1.png tabla2.png
+          git commit -m "Tablas actualizadas y recortadas" || exit 0
           git pull --rebase origin main
           git push origin main
