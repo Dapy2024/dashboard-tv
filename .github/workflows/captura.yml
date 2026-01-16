@@ -1,7 +1,7 @@
 name: Screenshot Dashboards Dash
 on:
   schedule:
-    - cron: '*/30 * * * *' # Se ejecutará cada 30 minutos
+    - cron: '*/5 * * * *' # Actualización cada 5 minutos
   workflow_dispatch: 
 
 permissions:
@@ -45,5 +45,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Actualización programada cada 30 min" || exit 0
+          git commit -m "Actualización cada 5 min - Crop OK" || exit 0
           git push origin main
