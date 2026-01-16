@@ -1,7 +1,7 @@
 name: Screenshot Dashboards Dash
 on:
   schedule:
-    - cron: '*/5 * * * *' 
+    - cron: '*/30 * * * *' # Se ejecutará cada 30 minutos
   workflow_dispatch: 
 
 permissions:
@@ -28,29 +28,22 @@ jobs:
 
       - name: Capturar Dashboard 1
         run: |
-          # Usamos window.scrollTo para bajar la página y ocultar lo de arriba
           shot-scraper shot "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --wait 60000 -w 1920 -h 1080 \
-          --javascript "
-            window.scrollTo(85, 120); 
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
-          " \
+          --javascript "window.scrollTo(85, 120); document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard1.png
 
       - name: Capturar Dashboard 2
         run: |
           shot-scraper shot "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --wait 60000 -w 1920 -h 1080 \
-          --javascript "
-            window.scrollTo(85, 120);
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
-          " \
+          --javascript "window.scrollTo(85, 120); document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard2.png
 
-      - name: Subir cambios al repositorio
+      - name: Guardar capturas y actualizar sitio
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Ajuste de scroll para centrar tabla" || exit 0
+          git commit -m "Actualización programada cada 30 min" || exit 0
           git push origin main
