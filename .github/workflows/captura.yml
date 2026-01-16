@@ -1,7 +1,7 @@
 name: Screenshot Tablas Vixion
 on:
   schedule:
-    - cron: '*/5 * * * *' # Cada 5 minutos para procesar ambas imágenes
+    - cron: '*/5 * * * *' 
   workflow_dispatch: 
 
 permissions:
@@ -24,18 +24,15 @@ jobs:
           pip install shot-scraper
           shot-scraper install
 
-      - name: Capturar Tabla 1 (Recortada)
+      - name: Capturar Tabla 1
         run: |
-          # x=80 y=100 (quita lateral y arriba) / w=1840 h=980
           shot-scraper "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --wait 60000 -w 1920 -h 1080 \
-          -o tabla1.png
+          --wait 60000 -w 1920 -h 1080 -o tabla1.png
 
-      - name: Capturar Tabla 2 (Recortada)
+      - name: Capturar Tabla 2
         run: |
           shot-scraper "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --wait 60000 -w 1920 -h 1080 \
-          -o tabla2.png
+          --wait 60000 -w 1920 -h 1080 -o tabla2.png
 
       - name: Guardar y Subir
         env:
@@ -44,6 +41,6 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add tabla1.png tabla2.png
-          git commit -m "Tablas actualizadas y recortadas" || exit 0
+          git commit -m "Tablas actualizadas" || exit 0
           git pull --rebase origin main
           git push origin main
