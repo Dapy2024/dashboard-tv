@@ -11,35 +11,34 @@ jobs:
   take-screenshot:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout del repositorio
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Instalar shot-scraper
+      - name: Instalar herramientas
         run: |
           pip install shot-scraper
           shot-scraper install
 
-      - name: Capturar Tabla 1 (Recortada)
+      - name: Capturar y Recortar Tabla
         run: |
-          # --clip x y ancho alto 
-          # Cortamos 80px de la izquierda (panel) y 100px de arriba (barra)
+          # Esperamos 60 segundos para carga total
+          # Clip: corta 85px desde la izquierda y 100px desde arriba
           shot-scraper "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --wait 60000 -w 1920 -h 1080 \
           --clip 85 100 1835 980 \
           -o tabla1.png
 
-      - name: Guardar y Subir
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Subir cambios al repositorio
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add tabla1.png
-          git commit -m "Tabla 1 recortada y limpia" || exit 0
-          git pull --rebase origin main
+          git commit -m "Actualizacion automatica con recorte" || exit 0
           git push origin main
