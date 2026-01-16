@@ -31,10 +31,11 @@ jobs:
           shot-scraper shot "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --wait 60000 -w 1920 -h 1080 \
           --javascript "
-            document.body.style.marginTop = '-220px';
+            // Subimos la pagina 400px para eliminar el bloque negro superior
+            document.body.style.marginTop = '-400px'; 
             document.body.style.marginLeft = '-85px';
-            document.body.style.backgroundColor = 'transparent';
-            document.querySelectorAll('.modal-dialog, [role=\'dialog\'], .goog-fixedpanel').forEach(el => el.remove());
+            // Eliminamos elementos que puedan quedar flotando
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog, [role=\'dialog\']').forEach(el => el.remove());
           " \
           -o dashboard1.png
 
@@ -43,10 +44,9 @@ jobs:
           shot-scraper shot "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --wait 60000 -w 1920 -h 1080 \
           --javascript "
-            document.body.style.marginTop = '-220px';
+            document.body.style.marginTop = '-400px';
             document.body.style.marginLeft = '-85px';
-            document.body.style.backgroundColor = 'transparent';
-            document.querySelectorAll('.modal-dialog, [role=\'dialog\'], .goog-fixedpanel').forEach(el => el.remove());
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog, [role=\'dialog\']').forEach(el => el.remove());
           " \
           -o dashboard2.png
 
@@ -55,5 +55,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Recorte superior ajustado para eliminar margen negro" || exit 0
+          git commit -m "Eliminado recuadro negro superior (-400px)" || exit 0
           git push origin main
