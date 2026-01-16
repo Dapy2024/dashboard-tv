@@ -1,7 +1,7 @@
 name: Screenshot Cada Minuto
 on:
   schedule:
-    - cron: '*/3 * * * *' # Cada 3 minutos para dar tiempo de sobra
+    - cron: '*/3 * * * *' 
   workflow_dispatch: 
 
 permissions:
@@ -24,22 +24,27 @@ jobs:
           pip install shot-scraper
           shot-scraper install
 
-      - name: Tomar Captura Limpia
+      - name: Tomar Captura Limpia sin Mensajes
         run: |
-          # Esperamos 60 segundos y ocultamos posibles diálogos de error con JavaScript
+          # Esperamos 60 segundos y ejecutamos un script para borrar cualquier cartel de la pantalla
           shot-scraper "https://lookerstudio.google.com/embed/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           -w 1920 -h 1080 \
           --wait 60000 \
-          --javascript "document.querySelectorAll('.modal-dialog, .cookie-banner').forEach(el => el.style.display = 'none')" \
+          --javascript "
+            // Borra carteles de error, diálogos de guardado y banners de cookies
+            document.querySelectorAll('.modal-dialog, .glass-pane, .goog-fixedpanel, [role=\'dialog\'], .cookie-banner').forEach(el => el.remove());
+            // Fuerza a que el fondo sea negro por si queda algún hueco
+            document.body.style.backgroundColor = 'black';
+          " \
           -o dashboard.png
 
       - name: Guardar y Subir
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           git add dashboard.png
-          git commit -m "Captura limpia 60s" || exit 0
+          git commit -m "Captura limpia sin avisos de error" || exit 0
           git pull --rebase origin main
           git push origin main
