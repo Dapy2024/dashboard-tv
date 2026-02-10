@@ -28,7 +28,7 @@ jobs:
           pip install playwright
           playwright install chromium
 
-      - name: Capturar Dashboards Looker Studio
+      - name: Capturar Dashboards Looker Studio (solo parte negra)
         run: |
           python - <<'EOF'
           from playwright.sync_api import sync_playwright
@@ -39,55 +39,62 @@ jobs:
                   browser = p.chromium.launch(headless=True)
                   page = browser.new_page(viewport={'width': 1920, 'height': 1080})
 
-                  print(f"Abriendo: {url}")
+                  print(f"🌐 Abriendo: {url}")
                   page.goto(url, wait_until="networkidle")
+                  time.sleep(12)
 
-                  # Esperar carga completa de Looker
-                  time.sleep(15)
+                  # Buscar iframe del reporte
+                  iframe_locator = page.locator("iframe[src*='reporting']").first
+                  if iframe_locator.count() == 0:
+                      raise Exception("❌ No se encontró el iframe del reporte")
 
-                  # Buscar iframe del dashboard
-                  frames = page.frames
-                  target_frame = None
-
-                  for f in frames:
-                      if "lookerstudio" in f.url or "reporting" in f.url:
-                          target_frame = f
-                          break
-
-                  if not target_frame:
-                      raise Exception("❌ No se encontró el iframe del dashboard")
-
-                  print("✅ Iframe encontrado:", target_frame.url)
-
-                  # Esperar el contenedor del reporte dentro del iframe
-                  target_frame.wait_for_selector("body", timeout=20000)
-
+                  frame = iframe_locator.content_frame()
+                  frame.wait_for_selector("body", timeout=20000)
                   time.sleep(5)
 
-                  # 🔥 Buscar el contenedor principal del dashboard
-                  box = target_frame.evaluate("""
+                  # 🔥 Buscar el contenedor real del dashboard (parte negra)
+                  box = frame.evaluate("""
                   () => {
-                    const elements = [...document.querySelectorAll("div")];
-                    const candidates = elements.filter(el => {
-                      const w = el.offsetWidth;
-                      const h = el.offsetHeight;
-                      return w > 1200 && h > 600;
-                    });
+                    const selectors = [
+                      'div.report-viewer-container',
+                      'div[class*="report"]',
+                      'div[class*="canvas"]'
+                    ];
 
-                    if (!candidates.length) return null;
+                    let target = null;
 
-                    const el = candidates.sort((a,b) => (b.offsetWidth*b.offsetHeight) - (a.offsetWidth*a.offsetHeight))[0];
-                    const r = el.getBoundingClientRect();
+                    for (const sel of selectors) {
+                      const el = document.querySelector(sel);
+                      if (el && el.offsetWidth > 1000 && el.offsetHeight > 600) {
+                        target = el;
+                        break;
+                      }
+                    }
+
+                    // fallback: buscar el div más grande
+                    if (!target) {
+                      const divs = [...document.querySelectorAll("div")];
+                      target = divs
+                        .filter(el => el.offsetWidth > 1000 && el.offsetHeight > 600)
+                        .sort((a,b) => (b.offsetWidth*b.offsetHeight)-(a.offsetWidth*a.offsetHeight))[0];
+                    }
+
+                    if (!target) return null;
+
+                    const r = target.getBoundingClientRect();
                     return {x:r.x, y:r.y, width:r.width, height:r.height};
                   }
                   """)
 
                   if box is None:
-                      raise Exception("❌ No se encontró el contenedor del dashboard dentro del iframe")
+                      raise Exception("❌ No se encontró el contenedor del dashboard")
 
-                  print("📸 Capturando área:", box)
+                  print("📸 Recorte detectado:", box)
 
-                  target_frame.page.screenshot(path=name, clip=box)
+                  # Captura SOLO el dashboard negro
+                  page.screenshot(path=name, clip=box)
+
+                  print(f"✅ Captura guardada: {name}")
                   browser.close()
 
           capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd", "dashboard1.png")
@@ -99,7 +106,8 @@ jobs:
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Auto screenshot Looker Studio dashboards" || exit 0
+          git commit -m "Auto screenshot Looker Studio dashboards (solo parte negra)" || exit 0
           git push origin main
+
 
 
