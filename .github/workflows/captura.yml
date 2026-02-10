@@ -31,14 +31,26 @@ jobs:
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --wait 60000 -w 1920 -h 1080 \
-          --javascript "window.scrollTo(85, 120); document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          --selector "body" \
+          --javascript "
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog, header, .navigation, [role=\"navigation\"], .left-nav').forEach(el => el.remove());
+            const reportContent = document.querySelector('lego-report-viewer-fairing') || document.querySelector('.report-content');
+            if (reportContent) { reportContent.style.margin = '0'; reportContent.style.padding = '0'; }
+            window.scrollTo(85, 120);
+          " \
           -o dashboard1.png
 
       - name: Capturar Dashboard 2
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --wait 60000 -w 1920 -h 1080 \
-          --javascript "window.scrollTo(85, 120); document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          --selector "body" \
+          --javascript "
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog, header, .navigation, [role=\"navigation\"], .left-nav').forEach(el => el.remove());
+            const reportContent = document.querySelector('lego-report-viewer-fairing') || document.querySelector('.report-content');
+            if (reportContent) { reportContent.style.margin = '0'; reportContent.style.padding = '0'; }
+            window.scrollTo(85, 120);
+          " \
           -o dashboard2.png
 
       - name: Guardar capturas y actualizar sitio
@@ -46,5 +58,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Fix total: Crop 120px y parametros correctos" || exit 0
+          git commit -m "Eliminación forzada de elementos laterales y superiores" || exit 0
           git push origin main
