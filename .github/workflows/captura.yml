@@ -26,37 +26,37 @@ jobs:
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Selector Exacto)
+      - name: Capturar Dashboard 1 (Cámara Ajustada)
         run: |
-          # Usamos --selector ".lego-reporting-view"
-          # Esto busca la caja del reporte y la captura aislada, ignorando menús y cabeceras.
-          # Agregamos --padding 0 para asegurar que no salga borde blanco.
+          # ESTRATEGIA: Ajustar la ventana y mover la página
+          # --width 1680 --height 960: Es el tamaño de la zona negra aprox.
+          # window.scrollTo(220, 100): Mueve el menú (220px) y cabecera (100px) fuera de vista.
           
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1920 --height 1200 \
-          --wait 15000 \
-          --selector ".lego-reporting-view" --padding 0 \
+          --width 1680 --height 960 \
+          --wait 20000 \
           --javascript "
-            // LIMPIEZA ADICIONAL DE SEGURIDAD
-            // 1. Borramos diálogos o popups flotantes
+            // 1. Limpieza de basura flotante
             document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
             
-            // 2. Forzamos fondo negro al contenedor por si acaso
-            const report = document.querySelector('.lego-reporting-view');
-            if (report) { report.style.backgroundColor = '#000000'; }
+            // 2. MOVER LA CÁMARA
+            // Nos desplazamos para saltar los bordes blancos
+            window.scrollTo(220, 100);
+            
+            // 3. Forzar overflow hidden para que no salgan barras de scroll en la foto
+            document.body.style.overflow = 'hidden';
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Selector Exacto)
+      - name: Capturar Dashboard 2 (Cámara Ajustada)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1920 --height 1200 \
-          --wait 15000 \
-          --selector ".lego-reporting-view" --padding 0 \
+          --width 1680 --height 960 \
+          --wait 20000 \
           --javascript "
             document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
-            const report = document.querySelector('.lego-reporting-view');
-            if (report) { report.style.backgroundColor = '#000000'; }
+            window.scrollTo(220, 100);
+            document.body.style.overflow = 'hidden';
           " \
           -o dashboard2.png
 
@@ -65,5 +65,5 @@ jobs:
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Captura limpia usando Selector .lego-reporting-view" || exit 0
+          git commit -m "Captura por Scroll (Window 1680x960, Scroll 220,100)" || exit 0
           git push origin main
