@@ -27,7 +27,7 @@ jobs:
           pip install shot-scraper
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Modo Presentación)
+      - name: Capturar Dashboard 1 (Modo Presentación Automático)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --width 1920 --height 1080 \
@@ -35,39 +35,60 @@ jobs:
           --javascript "
             new Promise(async (resolve) => {
               const wait = (ms) => new Promise(r => setTimeout(r, ms));
-              
-              // 1. Buscar el botón de 'Más opciones' (tres puntitos)
-              // Intentamos buscar por etiqueta en español, inglés o por clase común
-              const dots = document.querySelector('[aria-label=\"Más opciones\"]') || 
-                           document.querySelector('[aria-label=\"More options\"]') || 
-                           document.querySelector('.lego-header-more-menu-button');
+              console.log('Iniciando secuencia de presentación...');
+
+              // 1. BUSCAR EL BOTÓN DE OPCIONES (En Inglés y Español)
+              // Buscamos por varios atributos para asegurar el clic
+              const selectors = [
+                '[aria-label=\"More options\"]', // Inglés (Default GitHub)
+                '[aria-label=\"Más opciones\"]', // Español
+                '.lego-header-more-menu-button', // Clase interna de Google
+                'div[role=\"button\"][aria-haspopup=\"true\"]' // Genérico
+              ];
+
+              let dots = null;
+              for (const sel of selectors) {
+                dots = document.querySelector(sel);
+                if (dots) {
+                   console.log('Botón encontrado con selector:', sel);
+                   break;
+                }
+              }
 
               if (dots) {
-                console.log('Botón de opciones encontrado. Haciendo clic...');
-                dots.click();
-                await wait(1000); // Esperamos 1s a que se despliegue el menú
+                // Forzamos un evento de clic real (más seguro que .click())
+                const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                dots.dispatchEvent(clickEvent);
+                
+                await wait(2000); // Esperamos a que baje el menú
 
-                // 2. Buscar el botón 'Presentar' en el menú desplegado
-                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem, [role=\"menuitem\"]'));
-                const presentBtn = menuItems.find(el => el.innerText.match(/Presentar|Present/i));
+                // 2. BUSCAR EL BOTÓN PRESENTAR
+                // Buscamos en todos los items del menú la palabra 'Present'
+                const menuItems = Array.from(document.querySelectorAll('div[role=\"menuitem\"], .goog-menuitem'));
+                const presentBtn = menuItems.find(el => {
+                  const text = el.innerText || el.textContent;
+                  return text.match(/Present/i); // Coincide con 'Present', 'Presentar', 'Presentation'
+                });
 
                 if (presentBtn) {
-                  console.log('Botón Presentar encontrado. Activando...');
-                  presentBtn.click();
-                  // 3. Esperamos 5 segundos a que se ponga en pantalla completa
-                  await wait(5000);
+                  console.log('Botón Presentar detectado. Activando...');
+                  presentBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                  
+                  // 3. ESPERA FINAL PARA LIMPIEZA
+                  // Damos 10 segundos para que la animación termine y la barra inferior desaparezca
+                  await wait(10000);
                 } else {
-                  console.log('No se encontró el botón Presentar');
+                  console.error('ERROR: No se encontró la opción Presentar en el menú.');
                 }
               } else {
-                console.log('No se encontró el botón de tres puntitos');
+                console.error('ERROR: No se encontró el botón de tres puntitos.');
               }
               resolve();
             });
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Modo Presentación)
+      - name: Capturar Dashboard 2 (Modo Presentación Automático)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --width 1920 --height 1080 \
@@ -76,18 +97,23 @@ jobs:
             new Promise(async (resolve) => {
               const wait = (ms) => new Promise(r => setTimeout(r, ms));
               
-              const dots = document.querySelector('[aria-label=\"Más opciones\"]') || 
-                           document.querySelector('[aria-label=\"More options\"]') || 
-                           document.querySelector('.lego-header-more-menu-button');
+              const selectors = ['[aria-label=\"More options\"]', '[aria-label=\"Más opciones\"]', '.lego-header-more-menu-button'];
+              let dots = null;
+              for (const sel of selectors) {
+                dots = document.querySelector(sel);
+                if (dots) break;
+              }
 
               if (dots) {
-                dots.click();
-                await wait(1000);
-                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem, [role=\"menuitem\"]'));
-                const presentBtn = menuItems.find(el => el.innerText.match(/Presentar|Present/i));
+                dots.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                await wait(2000);
+
+                const menuItems = Array.from(document.querySelectorAll('div[role=\"menuitem\"], .goog-menuitem'));
+                const presentBtn = menuItems.find(el => (el.innerText || el.textContent).match(/Present/i));
+
                 if (presentBtn) {
-                  presentBtn.click();
-                  await wait(5000);
+                  presentBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                  await wait(10000);
                 }
               }
               resolve();
@@ -100,5 +126,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Interacción Humana: Clic en Tres Puntitos -> Presentar" || exit 0
+          git commit -m "Fix Interacción: Detección bilingüe y espera extendida" || exit 0
           git push origin main
