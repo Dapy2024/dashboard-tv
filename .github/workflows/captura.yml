@@ -25,42 +25,45 @@ jobs:
         run: |
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
-          sudo apt-get install -y imagemagick
 
-      - name: Capturar y Procesar Dashboard 1
+      - name: Capturar Dashboard 1 (Selector Exacto)
         run: |
-          # 1. CAPTURA TOTAL (Esperamos 15s para carga completa)
+          # Usamos --selector ".lego-reporting-view"
+          # Esto busca la caja del reporte y la captura aislada, ignorando menús y cabeceras.
+          # Agregamos --padding 0 para asegurar que no salga borde blanco.
+          
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1920 --height 1080 \
+          --width 1920 --height 1200 \
           --wait 15000 \
-          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
-          -o d1_raw.png
+          --selector ".lego-reporting-view" --padding 0 \
+          --javascript "
+            // LIMPIEZA ADICIONAL DE SEGURIDAD
+            // 1. Borramos diálogos o popups flotantes
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
+            
+            // 2. Forzamos fondo negro al contenedor por si acaso
+            const report = document.querySelector('.lego-reporting-view');
+            if (report) { report.style.backgroundColor = '#000000'; }
+          " \
+          -o dashboard1.png
 
-          # 2. RECORTE QUIRÚRGICO (Basado en medidas estándar de Google)
-          # X=+280: Elimina toda la barra lateral blanca (medida exacta).
-          # Y=+100: Elimina la cabecera superior.
-          # 1640x980: Es el área restante que contiene solo tu dashboard.
-          convert d1_raw.png -crop 1640x980+280+100 +repage d1_crop.png
-
-          # 3. FORMATO TV (Centrado en fondo negro 1920x1080)
-          convert d1_crop.png -gravity center -background black -extent 1920x1080 dashboard1.png
-
-      - name: Capturar y Procesar Dashboard 2
+      - name: Capturar Dashboard 2 (Selector Exacto)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1920 --height 1080 \
+          --width 1920 --height 1200 \
           --wait 15000 \
-          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
-          -o d2_raw.png
+          --selector ".lego-reporting-view" --padding 0 \
+          --javascript "
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
+            const report = document.querySelector('.lego-reporting-view');
+            if (report) { report.style.backgroundColor = '#000000'; }
+          " \
+          -o dashboard2.png
 
-          convert d2_raw.png -crop 1640x980+280+100 +repage d2_crop.png
-          convert d2_crop.png -gravity center -background black -extent 1920x1080 dashboard2.png
-
-      - name: Guardar Cambios
+      - name: Guardar y Push
         run: |
-          rm d1_raw.png d1_crop.png d2_raw.png d2_crop.png
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Captura corregida: Recorte estricto (+280+100) y Fondo Negro" || exit 0
+          git commit -m "Captura limpia usando Selector .lego-reporting-view" || exit 0
           git push origin main
