@@ -21,61 +21,77 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Instalar herramientas (Fix compatibilidad)
+      - name: Instalar herramientas
         run: |
           pip install playwright==1.40.0
           pip install shot-scraper
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Full Screen Force)
+      - name: Capturar Dashboard 1 (Modo Presentación)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --wait 60000 \
           --width 1920 --height 1080 \
+          --wait 40000 \
           --javascript "
-            // 1. ELIMINAR INTERFAZ: Borra cabeceras, menús laterales y barras de Google
-            const style = document.createElement('style');
-            style.innerHTML = \`
-              header, .goog-fixedpanel, .lego-header, .lego-navigation-component, .modal-dialog, .lego-gmp-component { display: none !important; }
-              body, #body { overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #000 !important; }
-            \`;
-            document.head.appendChild(style);
+            new Promise(async (resolve) => {
+              const wait = (ms) => new Promise(r => setTimeout(r, ms));
+              
+              // 1. Buscar el botón de 'Más opciones' (tres puntitos)
+              // Intentamos buscar por etiqueta en español, inglés o por clase común
+              const dots = document.querySelector('[aria-label=\"Más opciones\"]') || 
+                           document.querySelector('[aria-label=\"More options\"]') || 
+                           document.querySelector('.lego-header-more-menu-button');
 
-            // 2. FORZAR PANTALLA COMPLETA: Busca el reporte y lo estira a 100vw x 100vh
-            const report = document.querySelector('lego-report-viewer-fairing') || document.querySelector('.report-content') || document.body;
-            report.style.position = 'fixed';
-            report.style.top = '0';
-            report.style.left = '0';
-            report.style.width = '100vw'; // Ancho total de la ventana
-            report.style.height = '100vh'; // Alto total de la ventana
-            report.style.zIndex = '9999';
-            report.style.transform = 'scale(1.005)'; // Pequeño zoom para asegurar bordes negros
-            report.style.transformOrigin = 'top left';
+              if (dots) {
+                console.log('Botón de opciones encontrado. Haciendo clic...');
+                dots.click();
+                await wait(1000); // Esperamos 1s a que se despliegue el menú
+
+                // 2. Buscar el botón 'Presentar' en el menú desplegado
+                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem, [role=\"menuitem\"]'));
+                const presentBtn = menuItems.find(el => el.innerText.match(/Presentar|Present/i));
+
+                if (presentBtn) {
+                  console.log('Botón Presentar encontrado. Activando...');
+                  presentBtn.click();
+                  // 3. Esperamos 5 segundos a que se ponga en pantalla completa
+                  await wait(5000);
+                } else {
+                  console.log('No se encontró el botón Presentar');
+                }
+              } else {
+                console.log('No se encontró el botón de tres puntitos');
+              }
+              resolve();
+            });
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Full Screen Force)
+      - name: Capturar Dashboard 2 (Modo Presentación)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --wait 60000 \
           --width 1920 --height 1080 \
+          --wait 40000 \
           --javascript "
-            const style = document.createElement('style');
-            style.innerHTML = \`
-              header, .goog-fixedpanel, .lego-header, .lego-navigation-component, .modal-dialog, .lego-gmp-component { display: none !important; }
-              body, #body { overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #000 !important; }
-            \`;
-            document.head.appendChild(style);
+            new Promise(async (resolve) => {
+              const wait = (ms) => new Promise(r => setTimeout(r, ms));
+              
+              const dots = document.querySelector('[aria-label=\"Más opciones\"]') || 
+                           document.querySelector('[aria-label=\"More options\"]') || 
+                           document.querySelector('.lego-header-more-menu-button');
 
-            const report = document.querySelector('lego-report-viewer-fairing') || document.querySelector('.report-content') || document.body;
-            report.style.position = 'fixed';
-            report.style.top = '0';
-            report.style.left = '0';
-            report.style.width = '100vw';
-            report.style.height = '100vh';
-            report.style.zIndex = '9999';
-            report.style.transform = 'scale(1.005)';
-            report.style.transformOrigin = 'top left';
+              if (dots) {
+                dots.click();
+                await wait(1000);
+                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem, [role=\"menuitem\"]'));
+                const presentBtn = menuItems.find(el => el.innerText.match(/Presentar|Present/i));
+                if (presentBtn) {
+                  presentBtn.click();
+                  await wait(5000);
+                }
+              }
+              resolve();
+            });
           " \
           -o dashboard2.png
 
@@ -84,5 +100,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Modo Pantalla Completa: Ajuste CSS 100% viewport" || exit 0
+          git commit -m "Interacción Humana: Clic en Tres Puntitos -> Presentar" || exit 0
           git push origin main
