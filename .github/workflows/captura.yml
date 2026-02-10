@@ -30,15 +30,29 @@ jobs:
       - name: Capturar Dashboard 1
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --wait 60000 -w 1920 -h 1080 \
-          --javascript "window.scrollTo(85, 120); document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          --wait 60000 \
+          --viewport 1920 1080 \
+          --javascript "
+            // 1. Movemos el contenido para ocultar lo blanco (Arriba 120px, Izquierda 85px)
+            document.body.style.position = 'relative';
+            document.body.style.top = '-120px';
+            document.body.style.left = '-85px';
+            // 2. Eliminamos elementos molestos de la interfaz
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog, header, .navigation').forEach(el => el.style.display = 'none');
+          " \
           -o dashboard1.png
 
       - name: Capturar Dashboard 2
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --wait 60000 -w 1920 -h 1080 \
-          --javascript "window.scrollTo(85, 120); document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          --wait 60000 \
+          --viewport 1920 1080 \
+          --javascript "
+            document.body.style.position = 'relative';
+            document.body.style.top = '-120px';
+            document.body.style.left = '-85px';
+            document.querySelectorAll('.goog-fixedpanel, .modal-dialog, header, .navigation').forEach(el => el.style.display = 'none');
+          " \
           -o dashboard2.png
 
       - name: Guardar capturas y actualizar sitio
@@ -46,5 +60,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Crop final verificado: Scroll 120px" || exit 0
+          git commit -m "Fix Crop: Posicionamiento relativo -120px top" || exit 0
           git push origin main
