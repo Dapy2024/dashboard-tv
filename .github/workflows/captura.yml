@@ -26,36 +26,29 @@ jobs:
           pip install playwright==1.40.0
           pip install shot-scraper
           shot-scraper install
+          sudo apt-get install -y imagemagick
 
-      - name: Capturar Dashboard 1
+      - name: Capturar y Recortar Dashboard 1
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --wait 60000 -w 1920 -h 1080 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
-          --output dashboard1.png
-          
-      - name: Recortar Dashboard 1
-        run: |
-          # Instalamos ImageMagick para recortar la imagen físicamente
-          sudo apt-get install -y imagemagick
-          # Recorte: 1500x900 empezando en X=85 Y=120
-          convert dashboard1.png -crop 1500x900+85+120 dashboard1.png
+          -o dashboard1.png
+          # Recorte ajustado: 1550x850 empezando en X=180 Y=150
+          convert dashboard1.png -crop 1550x850+180+150 dashboard1.png
 
-      - name: Capturar Dashboard 2
+      - name: Capturar y Recortar Dashboard 2
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --wait 60000 -w 1920 -h 1080 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
-          --output dashboard2.png
-
-      - name: Recortar Dashboard 2
-        run: |
-          convert dashboard2.png -crop 1500x900+85+120 dashboard2.png
+          -o dashboard2.png
+          convert dashboard2.png -crop 1550x850+180+150 dashboard2.png
 
       - name: Guardar capturas y actualizar sitio
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Crop físico con ImageMagick (85, 120)" || exit 0
+          git commit -m "Recorte preciso: X=180 Y=150 (Solo zona negra)" || exit 0
           git push origin main
