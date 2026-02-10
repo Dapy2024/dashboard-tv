@@ -26,37 +26,73 @@ jobs:
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Cámara Ajustada)
+      - name: Capturar Dashboard 1 (Extracción Total)
         run: |
-          # ESTRATEGIA: Ajustar la ventana y mover la página
-          # --width 1680 --height 960: Es el tamaño de la zona negra aprox.
-          # window.scrollTo(220, 100): Mueve el menú (220px) y cabecera (100px) fuera de vista.
+          # ESTRATEGIA: "Extracción y Reubicación"
+          # 1. Buscamos el contenido (.lego-reporting-view)
+          # 2. Borramos todo el HTML del sitio.
+          # 3. Ponemos solo el contenido en un body negro limpio.
+          # 4. Lo movemos con márgenes negativos para ocultar lo blanco.
           
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1680 --height 960 \
-          --wait 20000 \
+          --width 1920 --height 1080 \
+          --wait 15000 \
           --javascript "
-            // 1. Limpieza de basura flotante
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
+            // 1. Identificar el bloque del reporte
+            const dashboard = document.querySelector('.lego-reporting-view') || document.body;
             
-            // 2. MOVER LA CÁMARA
-            // Nos desplazamos para saltar los bordes blancos
-            window.scrollTo(220, 100);
+            // 2. Clonar el dashboard para salvarlo
+            const clon = dashboard.cloneNode(true);
             
-            // 3. Forzar overflow hidden para que no salgan barras de scroll en la foto
-            document.body.style.overflow = 'hidden';
+            // 3. NUCLEAR: Borrar todo el sitio web
+            document.body.innerHTML = '';
+            
+            // 4. Reconstruir: Poner solo el dashboard en el body vacío
+            document.body.appendChild(clon);
+            
+            // 5. Estilar para TV (Fondo Negro Absoluto)
+            document.documentElement.style.backgroundColor = '#000000';
+            document.body.style.backgroundColor = '#000000';
+            document.body.style.overflow = 'hidden'; // Sin barras de scroll
+            document.body.style.margin = '0';
+            
+            // 6. POSICIONAMIENTO MAGICO (Aquí eliminamos los bordes blancos)
+            // margin-left: -280px -> Mueve todo a la izquierda, comiéndose el menú lateral.
+            // margin-top: -100px  -> Mueve todo arriba, comiéndose la cabecera.
+            
+            clon.style.position = 'fixed';
+            clon.style.top = '0';
+            clon.style.left = '0';
+            clon.style.marginLeft = '-280px'; 
+            clon.style.marginTop = '-100px';
+            clon.style.width = '120vw'; // Forzamos ancho extra para asegurar
+            clon.style.height = '120vh'; 
+            clon.style.zIndex = '9999';
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Cámara Ajustada)
+      - name: Capturar Dashboard 2 (Extracción Total)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1680 --height 960 \
-          --wait 20000 \
+          --width 1920 --height 1080 \
+          --wait 15000 \
           --javascript "
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
-            window.scrollTo(220, 100);
+            const dashboard = document.querySelector('.lego-reporting-view') || document.body;
+            const clon = dashboard.cloneNode(true);
+            document.body.innerHTML = '';
+            document.body.appendChild(clon);
+            
+            document.documentElement.style.backgroundColor = '#000000';
+            document.body.style.backgroundColor = '#000000';
             document.body.style.overflow = 'hidden';
+            
+            clon.style.position = 'fixed';
+            clon.style.top = '0';
+            clon.style.left = '0';
+            clon.style.marginLeft = '-280px';
+            clon.style.marginTop = '-100px';
+            clon.style.width = '120vw';
+            clon.style.height = '120vh';
           " \
           -o dashboard2.png
 
@@ -65,5 +101,5 @@ jobs:
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Captura por Scroll (Window 1680x960, Scroll 220,100)" || exit 0
+          git commit -m "Captura por Extracción JS (Margins -280/-100)" || exit 0
           git push origin main
