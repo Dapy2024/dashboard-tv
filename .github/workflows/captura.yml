@@ -1,32 +1,100 @@
-from playwright.sync_api import sync_playwright
-import time
+name: Screenshot Dashboards Dash
 
-def capture(url, name):
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport={'width': 1920, 'height': 1080})
-        page.goto(url)
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
-        # Esperar carga real del dashboard
-        page.wait_for_load_state("networkidle")
-        time.sleep(10)
+permissions:
+  contents: write
 
-        # Eliminar overlays / popups
-        page.evaluate("""
-        document.querySelectorAll('.goog-fixedpanel, .modal-dialog, iframe[src*="accounts.google"]').forEach(el => el.remove());
-        """)
+jobs:
+  take-screenshot:
+    runs-on: ubuntu-latest
 
-        # 🔥 BUSCAR EL CONTENEDOR NEGRO REAL DEL DASHBOARD
-        element = page.locator("div[data-testid='report-viewer'], div.report-viewer-container").first
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-        # Si Looker cambia clases, fallback: buscar el bloque negro por estilo
-        if element.count() == 0:
-            element = page.locator("div").filter(has_text="OVERVIEW GENERAL").first
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-        # Screenshot SOLO del dashboard negro
-        element.screenshot(path=name)
+      - name: Instalar Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
 
-        browser.close()
+      - name: Capturar Dashboards Looker Studio
+        run: |
+          python - <<'EOF'
+          from playwright.sync_api import sync_playwright
+          import time
 
-capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd", "dashboard1.png")
-capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd", "dashboard2.png")
+          def capture(url, name):
+              with sync_playwright() as p:
+                  browser = p.chromium.launch(headless=True)
+                  page = browser.new_page(viewport={'width': 1920, 'height': 1080})
+
+                  print(f"Abriendo: {url}")
+                  page.goto(url, wait_until="networkidle")
+
+                  # Espera extra para que Looker cargue datos
+                  time.sleep(12)
+
+                  # Eliminar popups / overlays molestos
+                  page.evaluate("""
+                    document.querySelectorAll(
+                      '.goog-fixedpanel, .modal-dialog, iframe[src*="accounts.google"], div[role="dialog"]'
+                    ).forEach(el => el.remove());
+                  """)
+
+                  # Scroll arriba (por si Looker mueve el viewport)
+                  page.evaluate("window.scrollTo(0,0)")
+
+                  # 🔥 Detectar el contenedor negro principal del dashboard
+                  box = page.evaluate("""
+                  () => {
+                    const elements = [...document.querySelectorAll("div")];
+                    const candidates = elements.filter(el => {
+                      const style = getComputedStyle(el);
+                      const bg = style.backgroundColor;
+                      const w = el.offsetWidth;
+                      const h = el.offsetHeight;
+                      return (
+                        (bg === "rgb(0, 0, 0)" || bg === "rgba(0, 0, 0, 1)") &&
+                        w > 1000 && h > 600
+                      );
+                    });
+
+                    if (!candidates.length) return null;
+
+                    const el = candidates.sort((a,b) => b.offsetWidth*b.offsetHeight - a.offsetWidth*a.offsetHeight)[0];
+                    const r = el.getBoundingClientRect();
+                    return {x:r.x, y:r.y, width:r.width, height:r.height};
+                  }
+                  """)
+
+                  if box is None:
+                      raise Exception("❌ No se encontró el contenedor negro del dashboard")
+
+                  print("📸 Capturando área:", box)
+
+                  page.screenshot(path=name, clip=box)
+                  browser.close()
+
+          capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd", "dashboard1.png")
+          capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd", "dashboard2.png")
+          EOF
+
+      - name: Guardar Capturas en GitHub
+        run: |
+          git config --local user.email "bot@github.com"
+          git config --local user.name "GitHub Action"
+          git add dashboard1.png dashboard2.png
+          git commit -m "Auto screenshot Looker Studio dashboards" || exit 0
+          git push origin main
+
