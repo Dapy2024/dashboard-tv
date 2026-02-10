@@ -26,75 +26,41 @@ jobs:
           pip install playwright==1.40.0
           pip install shot-scraper
           shot-scraper install
+          sudo apt-get install -y imagemagick
 
-      - name: Capturar Dashboard 1 (Forzado Kiosco)
+      - name: Procesar Dashboard 1 (Recorte Agresivo)
         run: |
+          # 1. Captura Rápida (15s) - Sale todo (blanco y negro)
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1920 --height 1080 \
-          --wait 20000 \
-          --javascript "
-            // 1. OCULTAR INTERFAZ GLOBAL
-            // Se ocultan cabeceras, paneles laterales y diálogos de forma radical
-            const style = document.createElement('style');
-            style.innerHTML = \`
-              header, .lego-header, .lego-navigation-component, .goog-fixedpanel, .modal-dialog, .lego-gmp-component { display: none !important; }
-              body { overflow: hidden !important; background-color: #000 !important; }
-            \`;
-            document.head.appendChild(style);
+          --width 1920 --height 1080 --wait 15000 \
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          -o d1_raw.png
 
-            // 2. ENCONTRAR EL LIENZO NEGRO
-            // Buscamos el contenedor específico donde se dibujan los gráficos (clase 'canvas-container' o similar)
-            let canvas = document.querySelector('.canvas-container') || document.querySelector('lego-report-viewer-fairing');
+          # 2. Recorte de Fuerza Bruta + Montaje TV
+          # X=230: Saltamos 230px a la derecha (Adios menú lateral seguro)
+          # Y=130: Saltamos 130px abajo (Adios cabecera blanca segura)
+          # 1650x850: Tomamos solo el centro negro
+          # -gravity center -background black -extent 1920x1080: Lo ponemos en el centro de la TV
+          convert d1_raw.png -crop 1650x850+230+130 +repage \
+          -gravity center -background black -extent 1920x1080 \
+          dashboard1.png
 
-            // 3. FORZAR CENTRADO Y ESCALA 16:9
-            // Esto toma el lienzo, lo coloca fijo en el centro y lo estira para llenar la pantalla
-            if (canvas) {
-              canvas.style.position = 'fixed';
-              canvas.style.top = '50%';
-              canvas.style.left = '50%';
-              canvas.style.transform = 'translate(-50%, -50%) scale(1.02)'; // scale(1.02) asegura que no queden bordes milimétricos
-              canvas.style.width = '1920px';
-              canvas.style.height = '1080px';
-              canvas.style.zIndex = '99999';
-              canvas.style.margin = '0';
-              canvas.style.padding = '0';
-            }
-          " \
-          -o dashboard1.png
-
-      - name: Capturar Dashboard 2 (Forzado Kiosco)
+      - name: Procesar Dashboard 2 (Recorte Agresivo)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1920 --height 1080 \
-          --wait 20000 \
-          --javascript "
-            const style = document.createElement('style');
-            style.innerHTML = \`
-              header, .lego-header, .lego-navigation-component, .goog-fixedpanel, .modal-dialog, .lego-gmp-component { display: none !important; }
-              body { overflow: hidden !important; background-color: #000 !important; }
-            \`;
-            document.head.appendChild(style);
+          --width 1920 --height 1080 --wait 15000 \
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          -o d2_raw.png
 
-            let canvas = document.querySelector('.canvas-container') || document.querySelector('lego-report-viewer-fairing');
+          convert d2_raw.png -crop 1650x850+230+130 +repage \
+          -gravity center -background black -extent 1920x1080 \
+          dashboard2.png
 
-            if (canvas) {
-              canvas.style.position = 'fixed';
-              canvas.style.top = '50%';
-              canvas.style.left = '50%';
-              canvas.style.transform = 'translate(-50%, -50%) scale(1.02)';
-              canvas.style.width = '1920px';
-              canvas.style.height = '1080px';
-              canvas.style.zIndex = '99999';
-              canvas.style.margin = '0';
-              canvas.style.padding = '0';
-            }
-          " \
-          -o dashboard2.png
-
-      - name: Guardar capturas
+      - name: Limpieza y Push
         run: |
+          rm d1_raw.png d2_raw.png
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Update: CSS Agresivo (Centrado y Escala) - 20s wait" || exit 0
+          git commit -m "Fix final: Recorte agresivo (+230+130) y espera 15s" || exit 0
           git push origin main
