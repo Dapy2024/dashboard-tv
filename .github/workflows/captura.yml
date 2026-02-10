@@ -21,68 +21,45 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install Tools
+      - name: Instalar Herramientas (Shot-Scraper + ImageMagick)
         run: |
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
+          # Instalamos la herramienta de edición de imágenes
+          sudo apt-get install -y imagemagick
 
-      - name: Capturar Dashboard 1 (Resolución Nativa)
+      - name: Capturar y Recortar Dashboard 1
         run: |
-          # ESTRATEGIA: Captura directa del elemento (Native Crop)
-          # Usamos --selector para que la herramienta recorte automáticamente la imagen
-          # al tamaño real del tablero, sea cual sea.
-          
+          # PASO 1: Captura NORMAL completa (1920x1080). Sale todo.
+          # Damos 25s para asegurar que cargue hasta el último dato.
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --width 1920 --height 1080 \
-          --wait 15000 \
-          --selector ".lego-reporting-view" \
-          --padding 0 \
-          --javascript "
-            // 1. Identificar el tablero
-            const dashboard = document.querySelector('.lego-reporting-view');
-            
-            // 2. Limpieza Total: Borrar todo lo que no sea el tablero
-            // (Esto elimina menús, cabeceras y popups automáticamente)
-            document.body.innerHTML = '';
-            document.body.appendChild(dashboard);
-            
-            // 3. Resetear posición a la esquina 0,0
-            // Al moverlo a un body vacío, ya no necesitamos márgenes negativos
-            dashboard.style.position = 'absolute';
-            dashboard.style.top = '0';
-            dashboard.style.left = '0';
-            dashboard.style.margin = '0';
-            dashboard.style.transform = 'none'; // Quitar cualquier escala previa
-            
-            // 4. Fondo transparente/blanco (natural)
-            document.body.style.backgroundColor = 'transparent';
-          " \
-          -o dashboard1.png
+          --wait 25000 \
+          -o d1_raw.png
 
-      - name: Capturar Dashboard 2 (Resolución Nativa)
+          # PASO 2: LA GUILLOTINA (Recorte post-producción)
+          # -chop 280x0+0+0: "Corta una columna de 280px de ancho desde la izquierda".
+          # Esto elimina físicamente la barra de navegación blanca.
+          convert d1_raw.png -chop 280x0+0+0 dashboard1.png
+
+      - name: Capturar y Recortar Dashboard 2
         run: |
+          # Paso 1: Captura cruda
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --width 1920 --height 1080 \
-          --wait 15000 \
-          --selector ".lego-reporting-view" \
-          --padding 0 \
-          --javascript "
-            const dashboard = document.querySelector('.lego-reporting-view');
-            document.body.innerHTML = '';
-            document.body.appendChild(dashboard);
-            
-            dashboard.style.position = 'absolute';
-            dashboard.style.top = '0';
-            dashboard.style.left = '0';
-            dashboard.style.margin = '0';
-            dashboard.style.transform = 'none';
-          " \
-          -o dashboard2.png
+          --wait 25000 \
+          -o d2_raw.png
 
-      - name: Guardar y Push
+          # Paso 2: Guillotina izquierda (280px)
+          convert d2_raw.png -chop 280x0+0+0 dashboard2.png
+
+      - name: Limpieza y Guardado
         run: |
+          # Borramos las imágenes crudas intermedias
+          rm d1_raw.png d2_raw.png
+          
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Captura Nativa: Solo el elemento .lego-reporting-view" || exit 0
+          git commit -m "FIX FINAL: Recorte de guillotina izquierda (-280px)" || exit 0
           git push origin main
