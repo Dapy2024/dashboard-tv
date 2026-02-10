@@ -26,78 +26,56 @@ jobs:
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Centrado Flexbox)
+      - name: Capturar Dashboard 1 (Resolución Nativa)
         run: |
-          # ESTRATEGIA FINAL: Extracción y Centrado Automático con Flexbox
-          # 1. Extraemos el contenido útil.
-          # 2. Convertimos el cuerpo de la página en una caja flexible (flexbox).
-          # 3. Alineamos al centro horizontal y verticalmente.
-          # 4. Forzamos el contenido a ocupar el máximo ancho/alto disponible.
+          # ESTRATEGIA: Captura directa del elemento (Native Crop)
+          # Usamos --selector para que la herramienta recorte automáticamente la imagen
+          # al tamaño real del tablero, sea cual sea.
           
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --width 1920 --height 1080 \
-          --wait 20000 \
+          --wait 15000 \
+          --selector ".lego-reporting-view" \
+          --padding 0 \
           --javascript "
-            // 1. IDENTIFICAR y CLONAR el contenido real del dashboard
-            // Buscamos la vista del reporte o el cuerpo principal si falla.
-            const dashboardContent = document.querySelector('.lego-reporting-view') || document.querySelector('lego-report-viewer-fairing') || document.body;
-            const clon = dashboardContent.cloneNode(true);
+            // 1. Identificar el tablero
+            const dashboard = document.querySelector('.lego-reporting-view');
             
-            // 2. LIMPIEZA NUCLEAR: Borrar todo el sitio original
+            // 2. Limpieza Total: Borrar todo lo que no sea el tablero
+            // (Esto elimina menús, cabeceras y popups automáticamente)
             document.body.innerHTML = '';
+            document.body.appendChild(dashboard);
             
-            // 3. PREPARAR EL CONTENEDOR (BODY) PARA CENTRAR
-            // Usamos CSS Flexbox para que el navegador haga los cálculos de centrado.
-            document.documentElement.style.height = '100%';
-            document.body.style.height = '100%';
-            document.body.style.margin = '0';
-            document.body.style.backgroundColor = '#000000'; // Fondo negro total
-            document.body.style.display = 'flex';           // Activar Flexbox
-            document.body.style.justifyContent = 'center';  // Centrar horizontalmente
-            document.body.style.alignItems = 'center';      // Centrar verticalmente
-            document.body.style.overflow = 'hidden';        // Sin barras de desplazamiento
+            // 3. Resetear posición a la esquina 0,0
+            // Al moverlo a un body vacío, ya no necesitamos márgenes negativos
+            dashboard.style.position = 'absolute';
+            dashboard.style.top = '0';
+            dashboard.style.left = '0';
+            dashboard.style.margin = '0';
+            dashboard.style.transform = 'none'; // Quitar cualquier escala previa
             
-            // 4. INSERTAR Y AJUSTAR EL DASHBOARD
-            document.body.appendChild(clon);
-            
-            // Forzamos al dashboard a no tener márgenes extraños y a ocupar el espacio.
-            // 'reset' de estilos críticos que podrían venir del original.
-            clon.style.position = 'static'; // Quitamos position fixed/absolute
-            clon.style.margin = '0';
-            clon.style.flexGrow = '0';      // No estirar más de lo necesario
-            clon.style.maxWidth = '100%';   // No salir de la pantalla
-            clon.style.maxHeight = '100%';  // No salir de la pantalla
-            // Opcional: Si se ve muy chico, descomenta la siguiente línea para forzar ancho completo
-            // clon.style.width = '100%'; 
+            // 4. Fondo transparente/blanco (natural)
+            document.body.style.backgroundColor = 'transparent';
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Centrado Flexbox)
+      - name: Capturar Dashboard 2 (Resolución Nativa)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --width 1920 --height 1080 \
-          --wait 20000 \
+          --wait 15000 \
+          --selector ".lego-reporting-view" \
+          --padding 0 \
           --javascript "
-            const dashboardContent = document.querySelector('.lego-reporting-view') || document.querySelector('lego-report-viewer-fairing') || document.body;
-            const clon = dashboardContent.cloneNode(true);
-            
+            const dashboard = document.querySelector('.lego-reporting-view');
             document.body.innerHTML = '';
+            document.body.appendChild(dashboard);
             
-            document.documentElement.style.height = '100%';
-            document.body.style.height = '100%';
-            document.body.style.margin = '0';
-            document.body.style.backgroundColor = '#000000';
-            document.body.style.display = 'flex';
-            document.body.style.justifyContent = 'center';
-            document.body.style.alignItems = 'center';
-            document.body.style.overflow = 'hidden';
-            
-            document.body.appendChild(clon);
-            
-            clon.style.position = 'static';
-            clon.style.margin = '0';
-            clon.style.maxWidth = '100%';
-            clon.style.maxHeight = '100%';
+            dashboard.style.position = 'absolute';
+            dashboard.style.top = '0';
+            dashboard.style.left = '0';
+            dashboard.style.margin = '0';
+            dashboard.style.transform = 'none';
           " \
           -o dashboard2.png
 
@@ -106,5 +84,5 @@ jobs:
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "FIX FINAL: Centrado Automático con Flexbox" || exit 0
+          git commit -m "Captura Nativa: Solo el elemento .lego-reporting-view" || exit 0
           git push origin main
