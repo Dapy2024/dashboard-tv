@@ -18,43 +18,50 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
 
-      - name: Instalar Herramientas
+      - name: Instalar Playwright
         run: |
-          pip install shot-scraper playwright==1.40.0
-          shot-scraper install
-          sudo apt-get install -y imagemagick
+          pip install playwright
+          playwright install chromium
 
-      - name: Capturar y Recortar Dashboard 1
+      - name: Capturar Dashboards
         run: |
-          # 1. Captura cruda total
-          shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1920 --height 1080 --wait 15000 \
-          -o d1_raw.png
+          python - <<EOF
+          from playwright.sync_api import sync_playwright
+          import time
 
-          # 2. RECORTE (CROP)
-          # Explicación: 1660x960 es el tamaño resultante. 
-          # +220 es lo que saltamos a la derecha (fuera menú izquierdo).
-          # +0 es lo que saltamos arriba (mantenemos cabecera).
-          convert d1_raw.png -crop 1660x960+220+0 +repage dashboard1.png
+          def capture(url, name):
+              with sync_playwright() as p:
+                  browser = p.chromium.launch()
+                  # Forzamos una ventana grande para que el dashboard se despliegue bien
+                  page = browser.new_page(viewport={'width': 1920, 'height': 1080})
+                  page.goto(url)
+                  
+                  # Espera real de 15 segundos para carga de datos
+                  time.sleep(15)
+                  
+                  # ELIMINAR ESTORBOS (Popups de Google)
+                  page.evaluate("document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove())")
 
-      - name: Capturar y Recortar Dashboard 2
+                  # RECORTE QUIRÚRGICO (CLIP)
+                  # x: 225 (Salta el menú blanco izquierdo)
+                  # y: 0 (Mantiene tu cabecera perfecta)
+                  # width: 1695 (El resto del ancho hasta el final)
+                  # height: 1000 (Corta el pie de página blanco)
+                  page.screenshot(
+                      path=name,
+                      clip={'x': 225, 'y': 0, 'width': 1695, 'height': 1000}
+                  )
+                  browser.close()
+
+          capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd", "dashboard1.png")
+          capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd", "dashboard2.png")
+          EOF
+
+      - name: Guardar Cambios
         run: |
-          # 1. Captura cruda total
-          shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1920 --height 1080 --wait 15000 \
-          -o d2_raw.png
-
-          # 2. RECORTE (CROP)
-          convert d2_raw.png -crop 1660x960+220+0 +repage dashboard2.png
-
-      - name: Limpieza y Push
-        run: |
-          rm d1_raw.png d2_raw.png
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Recorte manual: Eliminado menú izquierdo y pie de página" || exit 0
+          git commit -m "Fix Final: Playwright Clip Directo" || exit 0
           git push origin main
