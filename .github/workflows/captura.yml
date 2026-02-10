@@ -1,67 +1,32 @@
-name: Screenshot Dashboards Dash
-on:
-  schedule:
-    - cron: '*/5 * * * *' 
-  workflow_dispatch: 
+from playwright.sync_api import sync_playwright
+import time
 
-permissions:
-  contents: write
+def capture(url, name):
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={'width': 1920, 'height': 1080})
+        page.goto(url)
 
-jobs:
-  take-screenshot:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        # Esperar carga real del dashboard
+        page.wait_for_load_state("networkidle")
+        time.sleep(10)
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+        # Eliminar overlays / popups
+        page.evaluate("""
+        document.querySelectorAll('.goog-fixedpanel, .modal-dialog, iframe[src*="accounts.google"]').forEach(el => el.remove());
+        """)
 
-      - name: Instalar Playwright
-        run: |
-          pip install playwright
-          playwright install chromium
+        # 🔥 BUSCAR EL CONTENEDOR NEGRO REAL DEL DASHBOARD
+        element = page.locator("div[data-testid='report-viewer'], div.report-viewer-container").first
 
-      - name: Capturar Dashboards
-        run: |
-          python - <<EOF
-          from playwright.sync_api import sync_playwright
-          import time
+        # Si Looker cambia clases, fallback: buscar el bloque negro por estilo
+        if element.count() == 0:
+            element = page.locator("div").filter(has_text="OVERVIEW GENERAL").first
 
-          def capture(url, name):
-              with sync_playwright() as p:
-                  browser = p.chromium.launch()
-                  # Forzamos una ventana grande para que el dashboard se despliegue bien
-                  page = browser.new_page(viewport={'width': 1920, 'height': 1080})
-                  page.goto(url)
-                  
-                  # Espera real de 15 segundos para carga de datos
-                  time.sleep(15)
-                  
-                  # ELIMINAR ESTORBOS (Popups de Google)
-                  page.evaluate("document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove())")
+        # Screenshot SOLO del dashboard negro
+        element.screenshot(path=name)
 
-                  # RECORTE QUIRÚRGICO (CLIP)
-                  # x: 225 (Salta el menú blanco izquierdo)
-                  # y: 0 (Mantiene tu cabecera perfecta)
-                  # width: 1695 (El resto del ancho hasta el final)
-                  # height: 1000 (Corta el pie de página blanco)
-                  page.screenshot(
-                      path=name,
-                      clip={'x': 225, 'y': 0, 'width': 1695, 'height': 1000}
-                  )
-                  browser.close()
+        browser.close()
 
-          capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd", "dashboard1.png")
-          capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd", "dashboard2.png")
-          EOF
-
-      - name: Guardar Cambios
-        run: |
-          git config --local user.email "bot@github.com"
-          git config --local user.name "GitHub Action"
-          git add dashboard1.png dashboard2.png
-          git commit -m "Fix Final: Playwright Clip Directo" || exit 0
-          git push origin main
+capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd", "dashboard1.png")
+capture("https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd", "dashboard2.png")
