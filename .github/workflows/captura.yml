@@ -34,8 +34,10 @@ jobs:
           --wait 60000 -w 1920 -h 1080 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard1.png
-          # AJUSTE: X=182 (salta lateral blanco), Y=145 (salta titulos blancos), Ancho=1730 (tablero completo)
-          convert dashboard1.png -crop 1730x900+182+145 dashboard1.png
+          # RECORTE EXACTO AL ÁREA NEGRA:
+          # Salta 180px de blanco a la izquierda y 70px de blanco arriba.
+          # Toma un cuadro de 1680x910 para cubrir todo el negro sin pasarse al fondo.
+          convert dashboard1.png -crop 1680x910+180+70 dashboard1.png
 
       - name: Capturar y Recortar Dashboard 2
         run: |
@@ -43,12 +45,12 @@ jobs:
           --wait 60000 -w 1920 -h 1080 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard2.png
-          convert dashboard2.png -crop 1730x900+182+145 dashboard2.png
+          convert dashboard2.png -crop 1680x910+180+70 dashboard2.png
 
       - name: Guardar capturas y actualizar sitio
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Eliminando bordes blancos: Tablero completo (1730x900+182+145)" || exit 0
+          git commit -m "Encuadre final: 100% zona negra (1680x910+180+70)" || exit 0
           git push origin main
