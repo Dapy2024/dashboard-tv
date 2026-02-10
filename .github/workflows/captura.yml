@@ -1,8 +1,8 @@
 name: Screenshot Dashboards Dash
 on:
   schedule:
-    - cron: '*/5 * * * *'
-  workflow_dispatch:
+    - cron: '*/5 * * * *' 
+  workflow_dispatch: 
 
 permissions:
   contents: write
@@ -21,53 +21,68 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Instalar herramientas (Fix compatibilidad y Procesamiento de Imagen)
+      - name: Instalar herramientas (Fix compatibilidad)
         run: |
           pip install playwright==1.40.0
           pip install shot-scraper
           shot-scraper install
-          sudo apt-get install -y imagemagick
 
-      - name: Capturar y Procesar Dashboard 1 (Formato 16:9)
+      - name: Capturar Dashboard 1 (Full Screen Force)
         run: |
-          # 1. Captura inicial a pantalla completa
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --wait 60000 -w 1920 -h 1080 \
-          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
-          -o dashboard1_raw.png
+          --wait 60000 \
+          --width 1920 --height 1080 \
+          --javascript "
+            // 1. ELIMINAR INTERFAZ: Borra cabeceras, menús laterales y barras de Google
+            const style = document.createElement('style');
+            style.innerHTML = \`
+              header, .goog-fixedpanel, .lego-header, .lego-navigation-component, .modal-dialog, .lego-gmp-component { display: none !important; }
+              body, #body { overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #000 !important; }
+            \`;
+            document.head.appendChild(style);
 
-          # 2. Recortar SOLO la parte negra (Coordenadas estimadas para eliminar blanco)
-          # Se desplaza 190px a la derecha y 160px hacia abajo. Se toma un área de 1700x850.
-          convert dashboard1_raw.png -crop 1700x850+190+160 dashboard1_cropped.png
+            // 2. FORZAR PANTALLA COMPLETA: Busca el reporte y lo estira a 100vw x 100vh
+            const report = document.querySelector('lego-report-viewer-fairing') || document.querySelector('.report-content') || document.body;
+            report.style.position = 'fixed';
+            report.style.top = '0';
+            report.style.left = '0';
+            report.style.width = '100vw'; // Ancho total de la ventana
+            report.style.height = '100vh'; // Alto total de la ventana
+            report.style.zIndex = '9999';
+            report.style.transform = 'scale(1.005)'; // Pequeño zoom para asegurar bordes negros
+            report.style.transformOrigin = 'top left';
+          " \
+          -o dashboard1.png
 
-          # 3. Componer en un lienzo 16:9 (1920x1080) con fondo negro
-          # Esto centra el tablero y rellena con negro si es necesario para no deformar.
-          convert dashboard1_cropped.png -gravity center -background black -extent 1920x1080 dashboard1.png
-
-          # Limpiar archivos temporales
-          rm dashboard1_raw.png dashboard1_cropped.png
-
-      - name: Capturar y Procesar Dashboard 2 (Formato 16:9)
+      - name: Capturar Dashboard 2 (Full Screen Force)
         run: |
-          # 1. Captura inicial
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --wait 60000 -w 1920 -h 1080 \
-          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
-          -o dashboard2_raw.png
+          --wait 60000 \
+          --width 1920 --height 1080 \
+          --javascript "
+            const style = document.createElement('style');
+            style.innerHTML = \`
+              header, .goog-fixedpanel, .lego-header, .lego-navigation-component, .modal-dialog, .lego-gmp-component { display: none !important; }
+              body, #body { overflow: hidden !important; margin: 0 !important; padding: 0 !important; background: #000 !important; }
+            \`;
+            document.head.appendChild(style);
 
-          # 2. Recortar parte negra
-          convert dashboard2_raw.png -crop 1700x850+190+160 dashboard2_cropped.png
-
-          # 3. Componer en lienzo 16:9
-          convert dashboard2_cropped.png -gravity center -background black -extent 1920x1080 dashboard2.png
-
-          # Limpiar
-          rm dashboard2_raw.png dashboard2_cropped.png
+            const report = document.querySelector('lego-report-viewer-fairing') || document.querySelector('.report-content') || document.body;
+            report.style.position = 'fixed';
+            report.style.top = '0';
+            report.style.left = '0';
+            report.style.width = '100vw';
+            report.style.height = '100vh';
+            report.style.zIndex = '9999';
+            report.style.transform = 'scale(1.005)';
+            report.style.transformOrigin = 'top left';
+          " \
+          -o dashboard2.png
 
       - name: Guardar capturas y actualizar sitio
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Proceso Final: Recorte de zona negra y composición 16:9" || exit 0
+          git commit -m "Modo Pantalla Completa: Ajuste CSS 100% viewport" || exit 0
           git push origin main
