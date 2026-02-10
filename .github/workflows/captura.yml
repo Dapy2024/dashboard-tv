@@ -27,7 +27,7 @@ jobs:
           pip install shot-scraper
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Modo Presentación Automático)
+      - name: Capturar Dashboard 1 (Modo Presentación Robust)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --width 1920 --height 1080 \
@@ -35,60 +35,53 @@ jobs:
           --javascript "
             new Promise(async (resolve) => {
               const wait = (ms) => new Promise(r => setTimeout(r, ms));
-              console.log('Iniciando secuencia de presentación...');
+              console.log('Buscando menú de opciones...');
 
-              // 1. BUSCAR EL BOTÓN DE OPCIONES (En Inglés y Español)
-              // Buscamos por varios atributos para asegurar el clic
-              const selectors = [
-                '[aria-label=\"More options\"]', // Inglés (Default GitHub)
-                '[aria-label=\"Más opciones\"]', // Español
-                '.lego-header-more-menu-button', // Clase interna de Google
-                'div[role=\"button\"][aria-haspopup=\"true\"]' // Genérico
-              ];
+              // ESTRATEGIA 1: Buscar por la clase interna exacta de Looker Studio
+              let dots = document.querySelector('.lego-header-more-menu-button');
 
-              let dots = null;
-              for (const sel of selectors) {
-                dots = document.querySelector(sel);
-                if (dots) {
-                   console.log('Botón encontrado con selector:', sel);
-                   break;
-                }
+              // ESTRATEGIA 2: Si falla, buscar por icono (Google usa 'more_vert')
+              if (!dots) {
+                 const icons = Array.from(document.querySelectorAll('i.google-material-icons'));
+                 dots = icons.find(el => el.innerText === 'more_vert')?.parentElement;
               }
 
               if (dots) {
-                // Forzamos un evento de clic real (más seguro que .click())
-                const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+                console.log('Botón encontrado. Click!');
+                // Forzamos el clic en el centro del elemento
+                const rect = dots.getBoundingClientRect();
+                const clickEvent = new MouseEvent('click', {
+                  view: window, bubbles: true, cancelable: true,
+                  clientX: rect.left + rect.width / 2,
+                  clientY: rect.top + rect.height / 2
+                });
                 dots.dispatchEvent(clickEvent);
                 
-                await wait(2000); // Esperamos a que baje el menú
+                await wait(2000); // Esperar menú
 
-                // 2. BUSCAR EL BOTÓN PRESENTAR
-                // Buscamos en todos los items del menú la palabra 'Present'
-                const menuItems = Array.from(document.querySelectorAll('div[role=\"menuitem\"], .goog-menuitem'));
+                // BUSCAR BOTÓN 'PRESENTAR' (Icono de pantalla o texto)
+                // Buscamos cualquier item de menú que tenga el icono de 'present_to_all' o texto 'Present'
+                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem'));
                 const presentBtn = menuItems.find(el => {
-                  const text = el.innerText || el.textContent;
-                  return text.match(/Present/i); // Coincide con 'Present', 'Presentar', 'Presentation'
+                   return el.innerText.match(/Present/i) || el.innerHTML.includes('present_to_all');
                 });
 
                 if (presentBtn) {
-                  console.log('Botón Presentar detectado. Activando...');
+                  console.log('Opción Presentar encontrada. Click!');
                   presentBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-                  
-                  // 3. ESPERA FINAL PARA LIMPIEZA
-                  // Damos 10 segundos para que la animación termine y la barra inferior desaparezca
-                  await wait(10000);
+                  await wait(10000); // Tiempo para cargar pantalla completa
                 } else {
-                  console.error('ERROR: No se encontró la opción Presentar en el menú.');
+                  console.log('No se vio el botón Presentar en el menú');
                 }
               } else {
-                console.error('ERROR: No se encontró el botón de tres puntitos.');
+                console.log('No se encontraron los tres puntitos por clase o icono.');
               }
               resolve();
             });
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Modo Presentación Automático)
+      - name: Capturar Dashboard 2 (Modo Presentación Robust)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --width 1920 --height 1080 \
@@ -97,19 +90,23 @@ jobs:
             new Promise(async (resolve) => {
               const wait = (ms) => new Promise(r => setTimeout(r, ms));
               
-              const selectors = ['[aria-label=\"More options\"]', '[aria-label=\"Más opciones\"]', '.lego-header-more-menu-button'];
-              let dots = null;
-              for (const sel of selectors) {
-                dots = document.querySelector(sel);
-                if (dots) break;
+              let dots = document.querySelector('.lego-header-more-menu-button');
+              if (!dots) {
+                 const icons = Array.from(document.querySelectorAll('i.google-material-icons'));
+                 dots = icons.find(el => el.innerText === 'more_vert')?.parentElement;
               }
 
               if (dots) {
-                dots.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                const rect = dots.getBoundingClientRect();
+                dots.dispatchEvent(new MouseEvent('click', {
+                  view: window, bubbles: true, cancelable: true,
+                  clientX: rect.left + rect.width / 2,
+                  clientY: rect.top + rect.height / 2
+                }));
                 await wait(2000);
 
-                const menuItems = Array.from(document.querySelectorAll('div[role=\"menuitem\"], .goog-menuitem'));
-                const presentBtn = menuItems.find(el => (el.innerText || el.textContent).match(/Present/i));
+                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem'));
+                const presentBtn = menuItems.find(el => el.innerText.match(/Present/i) || el.innerHTML.includes('present_to_all'));
 
                 if (presentBtn) {
                   presentBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
@@ -126,5 +123,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Fix Interacción: Detección bilingüe y espera extendida" || exit 0
+          git commit -m "Fix Click: Usando clase .lego-header-more-menu-button" || exit 0
           git push origin main
