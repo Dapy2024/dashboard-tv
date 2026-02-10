@@ -25,24 +25,31 @@ jobs:
         run: |
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
-          # Instalamos la herramienta de edición de imágenes
+          # ImageMagick es el "Photoshop" de línea de comandos que usaremos para recortar
           sudo apt-get install -y imagemagick
 
-      - name: Capturar y Recortar Dashboard 1
+      - name: Procesar Dashboard 1 (Captura + Recorte 4 Lados)
         run: |
-          # PASO 1: Captura NORMAL completa (1920x1080). Sale todo.
-          # Damos 25s para asegurar que cargue hasta el último dato.
+          # PASO 1: Captura CRUDA completa (1920x1080). Sale todo el ruido blanco.
+          # Damos 25s de espera para asegurar carga total.
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --width 1920 --height 1080 \
           --wait 25000 \
           -o d1_raw.png
 
-          # PASO 2: LA GUILLOTINA (Recorte post-producción)
-          # -chop 280x0+0+0: "Corta una columna de 280px de ancho desde la izquierda".
-          # Esto elimina físicamente la barra de navegación blanca.
-          convert d1_raw.png -chop 280x0+0+0 dashboard1.png
+          # PASO 2: LA OPERACIÓN QUIRÚRGICA
+          # Explicación del comando 'convert':
+          # 1. d1_raw.png: Toma la imagen cruda.
+          # 2. -crop 1620x920: Define el tamaño del rectángulo que queremos MANTENER.
+          # 3. +280+100: Empieza el recorte saltando 280px desde la izquierda y 100px desde arriba.
+          # 4. +repage: Limpia el lienzo.
+          # 5. -background black -gravity center -extent 1920x1080: Toma el recorte, pon fondo negro, céntralo, y haz que la imagen final sea Full HD.
+          
+          convert d1_raw.png -crop 1620x920+280+100 +repage \
+          -background black -gravity center -extent 1920x1080 \
+          dashboard1.png
 
-      - name: Capturar y Recortar Dashboard 2
+      - name: Procesar Dashboard 2 (Captura + Recorte 4 Lados)
         run: |
           # Paso 1: Captura cruda
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
@@ -50,16 +57,18 @@ jobs:
           --wait 25000 \
           -o d2_raw.png
 
-          # Paso 2: Guillotina izquierda (280px)
-          convert d2_raw.png -chop 280x0+0+0 dashboard2.png
+          # Paso 2: Recorte 4 lados + Centrado en Negro
+          convert d2_raw.png -crop 1620x920+280+100 +repage \
+          -background black -gravity center -extent 1920x1080 \
+          dashboard2.png
 
       - name: Limpieza y Guardado
         run: |
-          # Borramos las imágenes crudas intermedias
+          # Borramos las imágenes crudas intermedias para no ensuciar el repo
           rm d1_raw.png d2_raw.png
           
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "FIX FINAL: Recorte de guillotina izquierda (-280px)" || exit 0
+          git commit -m "FIX FINAL: Recorte exacto de 4 lados y centrado en negro" || exit 0
           git push origin main
