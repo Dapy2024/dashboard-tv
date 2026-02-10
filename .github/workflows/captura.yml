@@ -34,8 +34,8 @@ jobs:
           --wait 60000 -w 1920 -h 1080 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard1.png
-          # Recorte ajustado: 1550x850 empezando en X=180 Y=150
-          convert dashboard1.png -crop 1550x850+180+150 dashboard1.png
+          # RECORTE DE PRECISIÓN: X=210 Y=155 (Elimina bordes blancos restantes)
+          convert dashboard1.png -crop 1460x860+210+155 dashboard1.png
 
       - name: Capturar y Recortar Dashboard 2
         run: |
@@ -43,12 +43,12 @@ jobs:
           --wait 60000 -w 1920 -h 1080 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard2.png
-          convert dashboard2.png -crop 1550x850+180+150 dashboard2.png
+          convert dashboard2.png -crop 1460x860+210+155 dashboard2.png
 
       - name: Guardar capturas y actualizar sitio
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Recorte preciso: X=180 Y=150 (Solo zona negra)" || exit 0
+          git commit -m "Recorte quirúrgico: Solo zona negra (X=210 Y=155)" || exit 0
           git push origin main
