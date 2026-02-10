@@ -26,73 +26,78 @@ jobs:
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Extracción + Zoom 1.5x)
+      - name: Capturar Dashboard 1 (Centrado Flexbox)
         run: |
-          # ESTRATEGIA: Extracción Limpia + Escala (Zoom)
-          # scale(1.5): Aumenta el tamaño un 50% para llenar la TV 1080p.
+          # ESTRATEGIA FINAL: Extracción y Centrado Automático con Flexbox
+          # 1. Extraemos el contenido útil.
+          # 2. Convertimos el cuerpo de la página en una caja flexible (flexbox).
+          # 3. Alineamos al centro horizontal y verticalmente.
+          # 4. Forzamos el contenido a ocupar el máximo ancho/alto disponible.
           
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --width 1920 --height 1080 \
-          --wait 15000 \
+          --wait 20000 \
           --javascript "
-            // 1. Identificar contenido
-            const dashboard = document.querySelector('.lego-reporting-view') || document.body;
-            const clon = dashboard.cloneNode(true);
+            // 1. IDENTIFICAR y CLONAR el contenido real del dashboard
+            // Buscamos la vista del reporte o el cuerpo principal si falla.
+            const dashboardContent = document.querySelector('.lego-reporting-view') || document.querySelector('lego-report-viewer-fairing') || document.body;
+            const clon = dashboardContent.cloneNode(true);
             
-            // 2. Limpiar sitio
+            // 2. LIMPIEZA NUCLEAR: Borrar todo el sitio original
             document.body.innerHTML = '';
+            
+            // 3. PREPARAR EL CONTENEDOR (BODY) PARA CENTRAR
+            // Usamos CSS Flexbox para que el navegador haga los cálculos de centrado.
+            document.documentElement.style.height = '100%';
+            document.body.style.height = '100%';
+            document.body.style.margin = '0';
+            document.body.style.backgroundColor = '#000000'; // Fondo negro total
+            document.body.style.display = 'flex';           // Activar Flexbox
+            document.body.style.justifyContent = 'center';  // Centrar horizontalmente
+            document.body.style.alignItems = 'center';      // Centrar verticalmente
+            document.body.style.overflow = 'hidden';        // Sin barras de desplazamiento
+            
+            // 4. INSERTAR Y AJUSTAR EL DASHBOARD
             document.body.appendChild(clon);
             
-            // 3. Fondo Negro
-            document.documentElement.style.backgroundColor = '#000000';
-            document.body.style.backgroundColor = '#000000';
-            document.body.style.overflow = 'hidden';
-            
-            // 4. POSICIONAMIENTO Y ZOOM (Aquí está la magia)
-            clon.style.position = 'fixed';
-            clon.style.top = '0';
-            clon.style.left = '0';
-            
-            // Movemos para ocultar bordes blancos (-280px izquierda, -100px arriba)
-            clon.style.marginLeft = '-280px'; 
-            clon.style.marginTop = '-100px';
-            
-            // ESCALAMOS (ZOOM)
-            // scale(1.53) suele ser el punto dulce para pasar de Laptop a TV 1080p
-            clon.style.transform = 'scale(1.53)';
-            clon.style.transformOrigin = 'top left'; // El zoom crece hacia la derecha y abajo
-            
-            // Forzamos dimensiones gigantes para que no se corte al hacer zoom
-            clon.style.width = '200vw'; 
-            clon.style.height = '200vh';
+            // Forzamos al dashboard a no tener márgenes extraños y a ocupar el espacio.
+            // 'reset' de estilos críticos que podrían venir del original.
+            clon.style.position = 'static'; // Quitamos position fixed/absolute
+            clon.style.margin = '0';
+            clon.style.flexGrow = '0';      // No estirar más de lo necesario
+            clon.style.maxWidth = '100%';   // No salir de la pantalla
+            clon.style.maxHeight = '100%';  // No salir de la pantalla
+            // Opcional: Si se ve muy chico, descomenta la siguiente línea para forzar ancho completo
+            // clon.style.width = '100%'; 
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Extracción + Zoom 1.5x)
+      - name: Capturar Dashboard 2 (Centrado Flexbox)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --width 1920 --height 1080 \
-          --wait 15000 \
+          --wait 20000 \
           --javascript "
-            const dashboard = document.querySelector('.lego-reporting-view') || document.body;
-            const clon = dashboard.cloneNode(true);
-            document.body.innerHTML = '';
-            document.body.appendChild(clon);
+            const dashboardContent = document.querySelector('.lego-reporting-view') || document.querySelector('lego-report-viewer-fairing') || document.body;
+            const clon = dashboardContent.cloneNode(true);
             
-            document.documentElement.style.backgroundColor = '#000000';
+            document.body.innerHTML = '';
+            
+            document.documentElement.style.height = '100%';
+            document.body.style.height = '100%';
+            document.body.style.margin = '0';
             document.body.style.backgroundColor = '#000000';
+            document.body.style.display = 'flex';
+            document.body.style.justifyContent = 'center';
+            document.body.style.alignItems = 'center';
             document.body.style.overflow = 'hidden';
             
-            clon.style.position = 'fixed';
-            clon.style.top = '0';
-            clon.style.left = '0';
-            clon.style.marginLeft = '-280px';
-            clon.style.marginTop = '-100px';
+            document.body.appendChild(clon);
             
-            clon.style.transform = 'scale(1.53)';
-            clon.style.transformOrigin = 'top left';
-            clon.style.width = '200vw';
-            clon.style.height = '200vh';
+            clon.style.position = 'static';
+            clon.style.margin = '0';
+            clon.style.maxWidth = '100%';
+            clon.style.maxHeight = '100%';
           " \
           -o dashboard2.png
 
@@ -101,5 +106,5 @@ jobs:
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Zoom Final: Scale 1.53 para llenar pantalla 1080p" || exit 0
+          git commit -m "FIX FINAL: Centrado Automático con Flexbox" || exit 0
           git push origin main
