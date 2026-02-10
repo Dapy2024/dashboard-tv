@@ -26,102 +26,40 @@ jobs:
           pip install playwright==1.40.0
           pip install shot-scraper
           shot-scraper install
+          sudo apt-get install -y imagemagick
 
-      - name: Capturar Dashboard 1 (Modo Presentación Robust)
+      - name: Procesar Dashboard 1
         run: |
+          # 1. Captura RAW (Pantalla completa con basura blanca)
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1920 --height 1080 \
-          --wait 40000 \
-          --javascript "
-            new Promise(async (resolve) => {
-              const wait = (ms) => new Promise(r => setTimeout(r, ms));
-              console.log('Buscando menú de opciones...');
+          --width 1920 --height 1080 --wait 30000 \
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          -o d1_raw.png
 
-              // ESTRATEGIA 1: Buscar por la clase interna exacta de Looker Studio
-              let dots = document.querySelector('.lego-header-more-menu-button');
+          # 2. Recorte y Montaje 16:9
+          # -crop: Extrae solo el tablero negro (1700x900 desde la coord 190,80)
+          # -resize: Ajusta el tamaño para llenar la pantalla (opcional, aquí mantenemos escala)
+          # -gravity center -background black -extent: Pone el recorte en el centro de un canvas 1920x1080 negro
+          convert d1_raw.png -crop 1700x900+190+80 +repage \
+          -gravity center -background black -extent 1920x1080 \
+          dashboard1.png
 
-              // ESTRATEGIA 2: Si falla, buscar por icono (Google usa 'more_vert')
-              if (!dots) {
-                 const icons = Array.from(document.querySelectorAll('i.google-material-icons'));
-                 dots = icons.find(el => el.innerText === 'more_vert')?.parentElement;
-              }
-
-              if (dots) {
-                console.log('Botón encontrado. Click!');
-                // Forzamos el clic en el centro del elemento
-                const rect = dots.getBoundingClientRect();
-                const clickEvent = new MouseEvent('click', {
-                  view: window, bubbles: true, cancelable: true,
-                  clientX: rect.left + rect.width / 2,
-                  clientY: rect.top + rect.height / 2
-                });
-                dots.dispatchEvent(clickEvent);
-                
-                await wait(2000); // Esperar menú
-
-                // BUSCAR BOTÓN 'PRESENTAR' (Icono de pantalla o texto)
-                // Buscamos cualquier item de menú que tenga el icono de 'present_to_all' o texto 'Present'
-                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem'));
-                const presentBtn = menuItems.find(el => {
-                   return el.innerText.match(/Present/i) || el.innerHTML.includes('present_to_all');
-                });
-
-                if (presentBtn) {
-                  console.log('Opción Presentar encontrada. Click!');
-                  presentBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-                  await wait(10000); // Tiempo para cargar pantalla completa
-                } else {
-                  console.log('No se vio el botón Presentar en el menú');
-                }
-              } else {
-                console.log('No se encontraron los tres puntitos por clase o icono.');
-              }
-              resolve();
-            });
-          " \
-          -o dashboard1.png
-
-      - name: Capturar Dashboard 2 (Modo Presentación Robust)
+      - name: Procesar Dashboard 2
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1920 --height 1080 \
-          --wait 40000 \
-          --javascript "
-            new Promise(async (resolve) => {
-              const wait = (ms) => new Promise(r => setTimeout(r, ms));
-              
-              let dots = document.querySelector('.lego-header-more-menu-button');
-              if (!dots) {
-                 const icons = Array.from(document.querySelectorAll('i.google-material-icons'));
-                 dots = icons.find(el => el.innerText === 'more_vert')?.parentElement;
-              }
+          --width 1920 --height 1080 --wait 30000 \
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          -o d2_raw.png
 
-              if (dots) {
-                const rect = dots.getBoundingClientRect();
-                dots.dispatchEvent(new MouseEvent('click', {
-                  view: window, bubbles: true, cancelable: true,
-                  clientX: rect.left + rect.width / 2,
-                  clientY: rect.top + rect.height / 2
-                }));
-                await wait(2000);
+          convert d2_raw.png -crop 1700x900+190+80 +repage \
+          -gravity center -background black -extent 1920x1080 \
+          dashboard2.png
 
-                const menuItems = Array.from(document.querySelectorAll('.goog-menuitem'));
-                const presentBtn = menuItems.find(el => el.innerText.match(/Present/i) || el.innerHTML.includes('present_to_all'));
-
-                if (presentBtn) {
-                  presentBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-                  await wait(10000);
-                }
-              }
-              resolve();
-            });
-          " \
-          -o dashboard2.png
-
-      - name: Guardar capturas y actualizar sitio
+      - name: Limpieza y Push
         run: |
+          rm d1_raw.png d2_raw.png
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Fix Click: Usando clase .lego-header-more-menu-button" || exit 0
+          git commit -m "Dashboard 16:9 Centrado (Recorte 1700x900+190+80)" || exit 0
           git push origin main
