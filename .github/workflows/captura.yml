@@ -28,30 +28,29 @@ jobs:
           shot-scraper install
           sudo apt-get install -y imagemagick
 
-      - name: Procesar Dashboard 1
+      - name: Procesar Dashboard 1 (Ajuste Final)
         run: |
-          # 1. Captura RAW (Pantalla completa con basura blanca)
+          # 1. Captura RAW a 1920x1080
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1920 --height 1080 --wait 30000 \
+          --width 1920 --height 1080 --wait 40000 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o d1_raw.png
 
-          # 2. Recorte y Montaje 16:9
-          # -crop: Extrae solo el tablero negro (1700x900 desde la coord 190,80)
-          # -resize: Ajusta el tamaño para llenar la pantalla (opcional, aquí mantenemos escala)
-          # -gravity center -background black -extent: Pone el recorte en el centro de un canvas 1920x1080 negro
-          convert d1_raw.png -crop 1700x900+190+80 +repage \
+          # 2. Recorte de Precisión + Centrado 16:9
+          # Extraemos el bloque de 1680x900 empezando en X=220, Y=120
+          # Lo colocamos sobre un fondo negro de 1920x1080
+          convert d1_raw.png -crop 1680x900+220+120 +repage \
           -gravity center -background black -extent 1920x1080 \
           dashboard1.png
 
-      - name: Procesar Dashboard 2
+      - name: Procesar Dashboard 2 (Ajuste Final)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1920 --height 1080 --wait 30000 \
+          --width 1920 --height 1080 --wait 40000 \
           --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o d2_raw.png
 
-          convert d2_raw.png -crop 1700x900+190+80 +repage \
+          convert d2_raw.png -crop 1680x900+220+120 +repage \
           -gravity center -background black -extent 1920x1080 \
           dashboard2.png
 
@@ -61,5 +60,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Dashboard 16:9 Centrado (Recorte 1700x900+190+80)" || exit 0
+          git commit -m "Ajuste Final: Recorte centrado 1680x900+220+120" || exit 0
           git push origin main
