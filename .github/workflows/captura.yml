@@ -26,46 +26,31 @@ jobs:
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Encuadre Directo)
+      - name: Capturar Dashboard 1 (Clip Exacto)
         run: |
+          # Usamos --clip-x --clip-y --clip-width --clip-height
+          # Esto le dice al navegador que SOLO renderice esa zona.
+          # X=185: Saltamos el menú lateral blanco.
+          # Y=115: Saltamos la cabecera blanca.
+          # W=1700: Capturamos todo el ancho hasta el borde derecho.
+          # H=900: Capturamos hasta antes del pie de página.
+          
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1920 --height 1080 \
+          --width 1920 --height 1200 \
           --wait 15000 \
-          --javascript "
-            // 1. ELIMINAR ELEMENTOS FLOTANTES MOLESTOS
-            // Borramos diálogos y botones que puedan tapar
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog, .lego-header-more-menu-button').forEach(el => el.remove());
-
-            // 2. ENCUADRE DE CÁMARA (ZOOM + SCROLL)
-            // Aplicamos un Zoom del 112% al cuerpo de la página
-            document.body.style.transform = 'scale(1.12)';
-            document.body.style.transformOrigin = '0 0'; // El zoom empieza arriba a la izquierda
-            
-            // 3. DESPLAZAR LA CÁMARA
-            // Nos movemos 220px a la derecha (saltar menú) y 100px abajo (saltar cabecera)
-            // Al haber hecho zoom, esto dejará el dashboard negro llenando toda la pantalla
-            window.scrollTo(220, 100);
-            
-            // 4. Asegurar fondo negro por si sobra algún pixel
-            document.body.style.backgroundColor = 'black';
-          " \
+          --clip-x 185 --clip-y 115 \
+          --clip-width 1700 --clip-height 900 \
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Encuadre Directo)
+      - name: Capturar Dashboard 2 (Clip Exacto)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1920 --height 1080 \
+          --width 1920 --height 1200 \
           --wait 15000 \
-          --javascript "
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
-            
-            // Zoom y Encuadre
-            document.body.style.transform = 'scale(1.12)';
-            document.body.style.transformOrigin = '0 0';
-            window.scrollTo(220, 100);
-            
-            document.body.style.backgroundColor = 'black';
-          " \
+          --clip-x 185 --clip-y 115 \
+          --clip-width 1700 --clip-height 900 \
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
           -o dashboard2.png
 
       - name: Guardar y Push
@@ -73,5 +58,5 @@ jobs:
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Captura con Encuadre (Scale 1.12 + Scroll 220,100)" || exit 0
+          git commit -m "Captura con CLIP exacto (185,115,1700,900)" || exit 0
           git push origin main
