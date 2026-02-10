@@ -25,47 +25,42 @@ jobs:
         run: |
           pip install shot-scraper playwright==1.40.0
           shot-scraper install
+          sudo apt-get install -y imagemagick
 
-      - name: Capturar Dashboard 1 (Recorte por Desplazamiento)
+      - name: Capturar y Procesar Dashboard 1
         run: |
-          # 1. Definimos el tamaño de la imagen final (--width y --height)
-          # Ponemos 1700x900 que es el tamaño aproximado de SOLO la zona negra.
-          
+          # 1. CAPTURA TOTAL (Esperamos 15s para carga completa)
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
-          --width 1700 --height 900 \
+          --width 1920 --height 1080 \
           --wait 15000 \
-          --javascript "
-            // 2. BORRAR ELEMENTOS FLOTANTES
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          -o d1_raw.png
 
-            // 3. MOVER EL MUNDO (La Clave)
-            // 'translate(-185px, -115px)' mueve todo el sitio hacia la izquierda y arriba.
-            // Esto hace que el menú lateral (185px) y la cabecera (115px) queden FUERA de la vista (coordenadas negativas).
-            // El punto (0,0) de la pantalla ahora será la esquina de tu dashboard negro.
-            
-            document.body.style.transform = 'translate(-185px, -115px)';
-            document.body.style.transformOrigin = 'top left';
-            document.body.style.overflow = 'hidden'; // Evita barras de scroll
-          " \
-          -o dashboard1.png
+          # 2. RECORTE QUIRÚRGICO (Basado en medidas estándar de Google)
+          # X=+280: Elimina toda la barra lateral blanca (medida exacta).
+          # Y=+100: Elimina la cabecera superior.
+          # 1640x980: Es el área restante que contiene solo tu dashboard.
+          convert d1_raw.png -crop 1640x980+280+100 +repage d1_crop.png
 
-      - name: Capturar Dashboard 2 (Recorte por Desplazamiento)
+          # 3. FORMATO TV (Centrado en fondo negro 1920x1080)
+          convert d1_crop.png -gravity center -background black -extent 1920x1080 dashboard1.png
+
+      - name: Capturar y Procesar Dashboard 2
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
-          --width 1700 --height 900 \
+          --width 1920 --height 1080 \
           --wait 15000 \
-          --javascript "
-            document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());
-            document.body.style.transform = 'translate(-185px, -115px)';
-            document.body.style.transformOrigin = 'top left';
-            document.body.style.overflow = 'hidden';
-          " \
-          -o dashboard2.png
+          --javascript "document.querySelectorAll('.goog-fixedpanel, .modal-dialog').forEach(el => el.remove());" \
+          -o d2_raw.png
 
-      - name: Guardar y Push
+          convert d2_raw.png -crop 1640x980+280+100 +repage d2_crop.png
+          convert d2_crop.png -gravity center -background black -extent 1920x1080 dashboard2.png
+
+      - name: Guardar Cambios
         run: |
+          rm d1_raw.png d1_crop.png d2_raw.png d2_crop.png
           git config --local user.email "bot@github.com"
           git config --local user.name "GitHub Action"
           git add dashboard1.png dashboard2.png
-          git commit -m "Fix: Recorte via CSS Translate (-185px, -115px)" || exit 0
+          git commit -m "Captura corregida: Recorte estricto (+280+100) y Fondo Negro" || exit 0
           git push origin main
