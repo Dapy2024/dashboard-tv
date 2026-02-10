@@ -27,57 +27,67 @@ jobs:
           pip install shot-scraper
           shot-scraper install
 
-      - name: Capturar Dashboard 1 (Forzado 100% Pantalla)
+      - name: Capturar Dashboard 1 (Forzado Kiosco)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_h4ubm1dzyd" \
           --width 1920 --height 1080 \
-          --wait 15000 \
+          --wait 20000 \
           --javascript "
-            // 1. Ocultar interfaz de Google (Cabecera y Barra Lateral)
+            // 1. OCULTAR INTERFAZ GLOBAL
+            // Se ocultan cabeceras, paneles laterales y diálogos de forma radical
             const style = document.createElement('style');
-            style.innerHTML = 'header, .lego-header, .lego-navigation-component, .goog-fixedpanel, .modal-dialog { display: none !important; }';
+            style.innerHTML = \`
+              header, .lego-header, .lego-navigation-component, .goog-fixedpanel, .modal-dialog, .lego-gmp-component { display: none !important; }
+              body { overflow: hidden !important; background-color: #000 !important; }
+            \`;
             document.head.appendChild(style);
 
-            // 2. Buscar el contenedor del reporte
-            const report = document.querySelector('.lego-reporting-view') || document.querySelector('lego-report-viewer-fairing') || document.body;
-            
-            // 3. Forzar dimensiones exactas 1920x1080
-            report.style.position = 'fixed';
-            report.style.top = '0';
-            report.style.left = '0';
-            report.style.width = '1920px';
-            report.style.height = '1080px';
-            report.style.zIndex = '9999';
-            report.style.overflow = 'hidden';
-            report.style.margin = '0';
-            report.style.padding = '0';
-            // Ajuste fino: Mover el contenido ligeramente hacia arriba si queda margen interno
-            report.style.transform = 'translateY(-5px)'; 
+            // 2. ENCONTRAR EL LIENZO NEGRO
+            // Buscamos el contenedor específico donde se dibujan los gráficos (clase 'canvas-container' o similar)
+            let canvas = document.querySelector('.canvas-container') || document.querySelector('lego-report-viewer-fairing');
+
+            // 3. FORZAR CENTRADO Y ESCALA 16:9
+            // Esto toma el lienzo, lo coloca fijo en el centro y lo estira para llenar la pantalla
+            if (canvas) {
+              canvas.style.position = 'fixed';
+              canvas.style.top = '50%';
+              canvas.style.left = '50%';
+              canvas.style.transform = 'translate(-50%, -50%) scale(1.02)'; // scale(1.02) asegura que no queden bordes milimétricos
+              canvas.style.width = '1920px';
+              canvas.style.height = '1080px';
+              canvas.style.zIndex = '99999';
+              canvas.style.margin = '0';
+              canvas.style.padding = '0';
+            }
           " \
           -o dashboard1.png
 
-      - name: Capturar Dashboard 2 (Forzado 100% Pantalla)
+      - name: Capturar Dashboard 2 (Forzado Kiosco)
         run: |
           shot-scraper shot "https://lookerstudio.google.com/u/1/reporting/d2c2a5e0-dcfe-4633-b141-d4d0179fcae4/page/p_l9do7lezyd" \
           --width 1920 --height 1080 \
-          --wait 15000 \
+          --wait 20000 \
           --javascript "
             const style = document.createElement('style');
-            style.innerHTML = 'header, .lego-header, .lego-navigation-component, .goog-fixedpanel, .modal-dialog { display: none !important; }';
+            style.innerHTML = \`
+              header, .lego-header, .lego-navigation-component, .goog-fixedpanel, .modal-dialog, .lego-gmp-component { display: none !important; }
+              body { overflow: hidden !important; background-color: #000 !important; }
+            \`;
             document.head.appendChild(style);
 
-            const report = document.querySelector('.lego-reporting-view') || document.querySelector('lego-report-viewer-fairing') || document.body;
-            
-            report.style.position = 'fixed';
-            report.style.top = '0';
-            report.style.left = '0';
-            report.style.width = '1920px';
-            report.style.height = '1080px';
-            report.style.zIndex = '9999';
-            report.style.overflow = 'hidden';
-            report.style.margin = '0';
-            report.style.padding = '0';
-            report.style.transform = 'translateY(-5px)';
+            let canvas = document.querySelector('.canvas-container') || document.querySelector('lego-report-viewer-fairing');
+
+            if (canvas) {
+              canvas.style.position = 'fixed';
+              canvas.style.top = '50%';
+              canvas.style.left = '50%';
+              canvas.style.transform = 'translate(-50%, -50%) scale(1.02)';
+              canvas.style.width = '1920px';
+              canvas.style.height = '1080px';
+              canvas.style.zIndex = '99999';
+              canvas.style.margin = '0';
+              canvas.style.padding = '0';
+            }
           " \
           -o dashboard2.png
 
@@ -86,5 +96,5 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add dashboard1.png dashboard2.png
-          git commit -m "Update: Captura eficiente CSS Injection (15s wait)" || exit 0
+          git commit -m "Update: CSS Agresivo (Centrado y Escala) - 20s wait" || exit 0
           git push origin main
